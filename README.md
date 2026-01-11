@@ -39,20 +39,30 @@ npm install -g @google/gemini-cli
 gemini  # follow auth prompts
 ```
 
-## Usage
+## Slash Commands (Optional)
 
-After installing, restart Claude Code and use:
+Copy the slash commands to your global commands folder:
 
 ```bash
-/codex-review                              # Review CC's recent work with Codex
-/codex-review --focus=security             # Focus on security
-/codex-review "Check for race conditions"  # Custom instructions
+# Clone repo (if not already)
+git clone https://github.com/SimonRen/cc-reviewer.git
 
-/gemini-review                             # Review with Gemini
-/gemini-review --focus=architecture        # Focus on architecture
+# Copy commands
+cp cc-reviewer/commands/*.md ~/.claude/commands/
+```
 
-/multi-review                              # Both models in parallel
-/multi-review --focus=security,performance # Focused multi-review
+Then use:
+
+```bash
+/codex-feedback                    # Review with Codex
+/codex-feedback security           # Focus on security
+/codex-feedback "Check for races"  # Custom instructions
+
+/gemini-feedback                   # Review with Gemini
+/gemini-feedback architecture      # Focus on architecture
+
+/multi-feedback                    # Both models in parallel
+/multi-feedback security           # Focused multi-review
 ```
 
 ## How It Works
