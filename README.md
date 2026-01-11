@@ -4,37 +4,36 @@ Get second-opinion feedback from OpenAI Codex and Google Gemini CLIs on Claude C
 
 ## Quick Install
 
-```bash
-# Clone the repo
-git clone https://github.com/SimonRen/cc-reviewer.git
-cd cc-reviewer
+Add to `~/.claude/settings.json`:
 
-# Build the MCP server
-cd mcp-server
-npm install
-npm run build
-cd ..
-
-# Add to Claude Code (global)
-cat >> ~/.claude/settings.json << 'EOF'
-{
-  "mcpServers": {
-    "ai-reviewer": {
-      "command": "node",
-      "args": ["$PWD/mcp-server/dist/index.js"]
-    }
-  }
-}
-EOF
-```
-
-Or add manually to `~/.claude/settings.json`:
 ```json
 {
   "mcpServers": {
-    "ai-reviewer": {
+    "cc-reviewer": {
+      "command": "npx",
+      "args": ["-y", "cc-reviewer"]
+    }
+  }
+}
+```
+
+That's it! Restart Claude Code and the tools are available.
+
+### Alternative: Manual Install
+
+```bash
+git clone https://github.com/SimonRen/cc-reviewer.git
+cd cc-reviewer/mcp-server
+npm install && npm run build
+```
+
+Then add to `~/.claude/settings.json`:
+```json
+{
+  "mcpServers": {
+    "cc-reviewer": {
       "command": "node",
-      "args": ["/path/to/ai-reviewer/mcp-server/dist/index.js"]
+      "args": ["/path/to/cc-reviewer/mcp-server/dist/index.js"]
     }
   }
 }
