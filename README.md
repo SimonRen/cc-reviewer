@@ -6,8 +6,8 @@ Get second-opinion feedback from OpenAI Codex and Google Gemini CLIs on Claude C
 
 ```bash
 # Clone the repo
-git clone https://github.com/jmulro/ai-reviewer.git
-cd ai-reviewer
+git clone https://github.com/SimonRen/cc-reviewer.git
+cd cc-reviewer
 
 # Build the MCP server
 cd mcp-server
