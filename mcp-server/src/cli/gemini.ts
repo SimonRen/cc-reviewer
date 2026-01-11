@@ -192,7 +192,7 @@ async function runWithRetry(
 /**
  * Execute the Gemini CLI in non-interactive mode
  *
- * Uses: gemini -p "<prompt>" --include-directories <workingDir>
+ * Uses: gemini --yolo --include-directories <workingDir> "<prompt>"
  */
 function runGeminiCli(
   prompt: string,
@@ -200,9 +200,11 @@ function runGeminiCli(
 ): Promise<{ stdout: string; stderr: string; exitCode: number; truncated: boolean }> {
   return new Promise((resolve, reject) => {
     // Build CLI arguments for non-interactive execution
+    // Use positional prompt (not deprecated -p flag) and --yolo for auto-approval
     const args = [
-      '-p', prompt,
-      '--include-directories', workingDir
+      '--yolo',
+      '--include-directories', workingDir,
+      prompt
     ];
 
     const proc = spawn('gemini', args, {
