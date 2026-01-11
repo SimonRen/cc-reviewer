@@ -173,6 +173,7 @@ function runCodexCli(prompt, workingDir) {
             '-c', 'model_reasoning_effort=xhigh',
             '-c', 'model_reasoning_summary_format=experimental',
             '--dangerously-bypass-approvals-and-sandbox',
+            '--skip-git-repo-check',
             '-C', workingDir,
             prompt
         ];

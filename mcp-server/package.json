@@ -1,6 +1,6 @@
 {
   "name": "cc-reviewer",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "MCP server for Claude Code - Get second-opinion feedback from Codex/Gemini CLIs",
   "type": "module",
   "main": "dist/index.js",
