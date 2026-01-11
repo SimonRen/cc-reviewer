@@ -1,0 +1,101 @@
+#!/usr/bin/env node
+/**
+ * AI Reviewer MCP Server
+ *
+ * Provides tools for getting second-opinion feedback from external AI CLIs
+ * (Codex and Gemini) on Claude Code's work.
+ */
+
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+
+import {
+  handleCodexFeedback,
+  handleGeminiFeedback,
+  handleMultiFeedback,
+  FeedbackInputSchema,
+  TOOL_DEFINITIONS
+} from './tools/feedback.js';
+import { logCliStatus } from './cli/check.js';
+
+// Create the MCP server
+const server = new Server(
+  {
+    name: 'ai-reviewer',
+    version: '1.0.0',
+  },
+  {
+    capabilities: {
+      tools: {},
+    },
+  }
+);
+
+// Handle tool listing
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      TOOL_DEFINITIONS.codex_feedback,
+      TOOL_DEFINITIONS.gemini_feedback,
+      TOOL_DEFINITIONS.multi_feedback,
+    ],
+  };
+});
+
+// Handle tool calls
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  const { name, arguments: args } = request.params;
+
+  try {
+    // Validate input
+    const input = FeedbackInputSchema.parse(args);
+
+    switch (name) {
+      case 'codex_feedback':
+        return await handleCodexFeedback(input);
+
+      case 'gemini_feedback':
+        return await handleGeminiFeedback(input);
+
+      case 'multi_feedback':
+        return await handleMultiFeedback(input);
+
+      default:
+        return {
+          content: [{
+            type: 'text',
+            text: `Unknown tool: ${name}`
+          }],
+          isError: true
+        };
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return {
+      content: [{
+        type: 'text',
+        text: `Error: ${errorMessage}`
+      }],
+      isError: true
+    };
+  }
+});
+
+// Start the server
+async function main() {
+  // Log CLI availability status on startup
+  await logCliStatus();
+
+  const transport = new StdioServerTransport();
+  await server.connect(transport);
+  console.error('AI Reviewer MCP Server running on stdio');
+}
+
+main().catch((error) => {
+  console.error('Fatal error:', error);
+  process.exit(1);
+});

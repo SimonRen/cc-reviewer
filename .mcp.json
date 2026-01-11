@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "ai-reviewer": {
+      "command": "node",
+      "args": ["mcp-server/dist/index.js"],
+      "cwd": "."
+    }
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "name": "ai-reviewer",
+  "version": "1.0.0",
+  "description": "Get second-opinion feedback from Codex/Gemini CLIs on Claude Code's work",
+  "author": "jmulro",
+  "homepage": "https://github.com/jmulro/multi-cli",
+  "commands": [
+    {
+      "name": "codex-review",
+      "description": "Get Codex feedback on CC's recent work",
+      "file": "commands/codex-review.md"
+    },
+    {
+      "name": "gemini-review",
+      "description": "Get Gemini feedback on CC's recent work",
+      "file": "commands/gemini-review.md"
+    },
+    {
+      "name": "multi-review",
+      "description": "Get parallel review from both Codex and Gemini",
+      "file": "commands/multi-review.md"
+    }
+  ]
+}
