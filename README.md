@@ -4,20 +4,17 @@ Get second-opinion feedback from OpenAI Codex and Google Gemini CLIs on Claude C
 
 ## Quick Install
 
-Add to `~/.claude/settings.json`:
-
-```json
-{
-  "mcpServers": {
-    "cc-reviewer": {
-      "command": "npx",
-      "args": ["-y", "cc-reviewer"]
-    }
-  }
-}
+```bash
+claude mcp add -s user cc-reviewer -- npx -y cc-reviewer
 ```
 
 That's it! Restart Claude Code and the tools are available.
+
+Verify with:
+```bash
+claude mcp list
+# cc-reviewer: npx -y cc-reviewer - ✓ Connected
+```
 
 ### Alternative: Manual Install
 
@@ -25,18 +22,7 @@ That's it! Restart Claude Code and the tools are available.
 git clone https://github.com/SimonRen/cc-reviewer.git
 cd cc-reviewer/mcp-server
 npm install && npm run build
-```
-
-Then add to `~/.claude/settings.json`:
-```json
-{
-  "mcpServers": {
-    "cc-reviewer": {
-      "command": "node",
-      "args": ["/path/to/cc-reviewer/mcp-server/dist/index.js"]
-    }
-  }
-}
+claude mcp add -s user cc-reviewer -- node /path/to/cc-reviewer/mcp-server/dist/index.js
 ```
 
 ## Prerequisites
