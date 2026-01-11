@@ -150,12 +150,10 @@ ai-reviewer/
 ## CLI Configuration
 
 ### Codex
-Uses your preferred flags:
 ```bash
 codex exec -m gpt-5.2-codex \
   -c model_reasoning_effort=xhigh \
   -c model_reasoning_summary_format=experimental \
-  --search \
   --dangerously-bypass-approvals-and-sandbox
 ```
 

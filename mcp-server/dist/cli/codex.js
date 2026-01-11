@@ -160,21 +160,18 @@ async function runWithRetry(request, attempt, previousError, previousOutput) {
 /**
  * Execute the Codex CLI in non-interactive mode
  *
- * Uses user's preferred flags:
- * codex exec -m gpt-5.2-codex -c model_reasoning_effort="xhigh" \
- *   -c model_reasoning_summary_format=experimental --search \
+ * Uses: codex exec -m gpt-5.2-codex -c model_reasoning_effort="xhigh" \
+ *   -c model_reasoning_summary_format=experimental \
  *   --dangerously-bypass-approvals-and-sandbox "<prompt>"
  */
 function runCodexCli(prompt, workingDir) {
     return new Promise((resolve, reject) => {
         // Build CLI arguments for non-interactive execution
-        // Uses: codex exec -m gpt-5.2-codex -c model_reasoning_effort="xhigh" ...
         const args = [
             'exec',
             '-m', 'gpt-5.2-codex',
             '-c', 'model_reasoning_effort=xhigh',
             '-c', 'model_reasoning_summary_format=experimental',
-            '--search',
             '--dangerously-bypass-approvals-and-sandbox',
             '-C', workingDir,
             prompt
