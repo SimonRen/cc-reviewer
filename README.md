@@ -54,15 +54,13 @@ cp cc-reviewer/commands/*.md ~/.claude/commands/
 Then use:
 
 ```bash
-/codex-feedback                    # Review with Codex
-/codex-feedback security           # Focus on security
-/codex-feedback "Check for races"  # Custom instructions
+/codex                    # Review with Codex
+/codex security           # Focus on security
 
-/gemini-feedback                   # Review with Gemini
-/gemini-feedback architecture      # Focus on architecture
+/gemini                   # Review with Gemini
+/gemini architecture      # Focus on architecture
 
-/multi-feedback                    # Both models in parallel
-/multi-feedback security           # Focused multi-review
+/multi                    # Both models in parallel
 ```
 
 ## How It Works
