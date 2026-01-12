@@ -12,9 +12,11 @@ import { FeedbackRequest, FeedbackResult } from '../types.js';
 import { build7SectionPrompt, buildDeveloperInstructions, buildRetryPrompt, isValidFeedbackOutput } from '../prompt.js';
 import { createTimeoutError, createCliNotFoundError, getSuggestion } from '../errors.js';
 
-const TIMEOUT_MS = 600000; // 10 minutes
+// Activity-based timeout: reset on output, kill on silence
+const INACTIVITY_TIMEOUT_MS = 120000;  // 2 min of no output = timeout
+const MAX_TIMEOUT_MS = 3600000;        // 60 min absolute max (edge case safety)
 const MAX_RETRIES = 2;
-const MAX_BUFFER_SIZE = 1024 * 1024; // 1MB max buffer to prevent memory issues
+const MAX_BUFFER_SIZE = 1024 * 1024;   // 1MB max buffer to prevent memory issues
 
 /**
  * Run Gemini CLI with the given request
@@ -166,11 +168,15 @@ async function runWithRetry(
       };
     }
 
-    if (err.message === 'TIMEOUT') {
+    if (err.message === 'TIMEOUT' || err.message === 'MAX_TIMEOUT') {
+      const isMaxTimeout = err.message === 'MAX_TIMEOUT';
+      const timeoutMs = isMaxTimeout ? MAX_TIMEOUT_MS : INACTIVITY_TIMEOUT_MS;
       return {
         success: false,
-        error: createTimeoutError('gemini', TIMEOUT_MS),
-        suggestion: getSuggestion(createTimeoutError('gemini', TIMEOUT_MS)),
+        error: createTimeoutError('gemini', timeoutMs),
+        suggestion: isMaxTimeout
+          ? 'Task exceeded 60 minute maximum. Try a smaller scope.'
+          : 'No output for 2 minutes. Process may be hung. Try a smaller scope or use --focus.',
         model: 'gemini'
       };
     }
@@ -216,8 +222,28 @@ function runGeminiCli(
     let stdout = '';
     let stderr = '';
     let truncated = false;
+    let inactivityTimer: NodeJS.Timeout;
+
+    // Max timeout - absolute cap (60 min)
+    const maxTimer = setTimeout(() => {
+      proc.kill('SIGTERM');
+      reject(new Error('MAX_TIMEOUT'));
+    }, MAX_TIMEOUT_MS);
+
+    // Activity-based timeout - reset on any output
+    const resetInactivityTimer = () => {
+      clearTimeout(inactivityTimer);
+      inactivityTimer = setTimeout(() => {
+        proc.kill('SIGTERM');
+        reject(new Error('TIMEOUT'));
+      }, INACTIVITY_TIMEOUT_MS);
+    };
+
+    // Start inactivity timer
+    resetInactivityTimer();
 
     proc.stdout.on('data', (data) => {
+      resetInactivityTimer();  // Still streaming = reset timer
       if (stdout.length < MAX_BUFFER_SIZE) {
         stdout += data.toString();
         if (stdout.length > MAX_BUFFER_SIZE) {
@@ -228,6 +254,7 @@ function runGeminiCli(
     });
 
     proc.stderr.on('data', (data) => {
+      resetInactivityTimer();  // Still streaming = reset timer
       if (stderr.length < MAX_BUFFER_SIZE) {
         stderr += data.toString();
         if (stderr.length > MAX_BUFFER_SIZE) {
@@ -236,14 +263,9 @@ function runGeminiCli(
       }
     });
 
-    // Timeout handling
-    const timeout = setTimeout(() => {
-      proc.kill('SIGTERM');
-      reject(new Error('TIMEOUT'));
-    }, TIMEOUT_MS);
-
     proc.on('close', (code) => {
-      clearTimeout(timeout);
+      clearTimeout(inactivityTimer);
+      clearTimeout(maxTimer);
       resolve({
         stdout,
         stderr,
@@ -253,7 +275,8 @@ function runGeminiCli(
     });
 
     proc.on('error', (err) => {
-      clearTimeout(timeout);
+      clearTimeout(inactivityTimer);
+      clearTimeout(maxTimer);
       reject(err);
     });
   });

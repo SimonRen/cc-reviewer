@@ -20,9 +20,32 @@ Use the `gemini_feedback` MCP tool to get feedback from Gemini CLI.
    - `focus`: extracted from $ARGUMENTS if it's a known focus area (security, performance, architecture, correctness, maintainability, scalability, testing, documentation)
    - `customInstructions`: $ARGUMENTS if it's custom text
 
-3. After receiving feedback:
-   - Present the feedback clearly
-   - Highlight any disagreements or critical additions
-   - Offer to incorporate valid suggestions
+3. After receiving feedback - VALIDATE before accepting:
+
+   IMPORTANT: Do NOT blindly accept external feedback. You must:
+
+   a. **Verify file references exist**
+      - Check any mentioned file:line actually exists
+      - Flag hallucinated paths immediately
+
+   b. **Cross-check claims by reading code**
+      - Read the actual files mentioned
+      - Verify the issue described matches reality
+
+   c. **Mark your confidence level for each finding:**
+      - ✓✓ Verified (you checked the code yourself)
+      - ✓ Likely (plausible but not verified)
+      - ? Uncertain (needs more investigation)
+      - ✗ Rejected (you disagree after checking)
+
+   d. **Make YOUR recommendation**
+      - Don't just relay their findings
+      - Apply your own judgment
+      - You may disagree with external feedback
+
+4. Present synthesis:
+   - Show validated findings with confidence levels
+   - Highlight anything that looks like a hallucination
+   - Offer to incorporate only verified/likely suggestions
 
 $ARGUMENTS
