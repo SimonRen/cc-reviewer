@@ -12,7 +12,7 @@ import { FeedbackRequest, FeedbackResult } from '../types.js';
 import { build7SectionPrompt, buildDeveloperInstructions, buildRetryPrompt, isValidFeedbackOutput } from '../prompt.js';
 import { createTimeoutError, createCliNotFoundError, getSuggestion } from '../errors.js';
 
-const TIMEOUT_MS = 180000; // 3 minutes
+const TIMEOUT_MS = 600000; // 10 minutes
 const MAX_RETRIES = 2;
 const MAX_BUFFER_SIZE = 1024 * 1024; // 1MB max buffer to prevent memory issues
 

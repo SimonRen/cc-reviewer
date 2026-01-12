@@ -4,6 +4,7 @@
 export type OutputType = 'plan' | 'findings' | 'analysis' | 'proposal';
 export type FocusArea = 'security' | 'performance' | 'architecture' | 'correctness' | 'maintainability' | 'scalability' | 'testing' | 'documentation';
 export type CliType = 'codex' | 'gemini';
+export type ReasoningEffort = 'high' | 'xhigh';
 export interface FeedbackRequest {
     workingDir: string;
     ccOutput: string;
@@ -11,6 +12,7 @@ export interface FeedbackRequest {
     analyzedFiles?: string[];
     focusAreas?: FocusArea[];
     customPrompt?: string;
+    reasoningEffort?: ReasoningEffort;
 }
 export interface FeedbackSuccess {
     success: true;

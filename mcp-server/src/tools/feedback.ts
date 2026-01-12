@@ -19,7 +19,8 @@ export const FeedbackInputSchema = z.object({
     'security', 'performance', 'architecture', 'correctness',
     'maintainability', 'scalability', 'testing', 'documentation'
   ])).optional().describe('Areas to focus the review on'),
-  customPrompt: z.string().optional().describe('Custom instructions for the reviewer')
+  customPrompt: z.string().optional().describe('Custom instructions for the reviewer'),
+  reasoningEffort: z.enum(['high', 'xhigh']).optional().describe('Codex reasoning effort level (default: high, use xhigh for deeper analysis)')
 });
 
 export type FeedbackInput = z.infer<typeof FeedbackInputSchema>;
@@ -34,7 +35,8 @@ function toFeedbackRequest(input: FeedbackInput): FeedbackRequest {
     outputType: input.outputType as OutputType,
     analyzedFiles: input.analyzedFiles,
     focusAreas: input.focusAreas as FocusArea[] | undefined,
-    customPrompt: input.customPrompt
+    customPrompt: input.customPrompt,
+    reasoningEffort: input.reasoningEffort
   };
 }
 

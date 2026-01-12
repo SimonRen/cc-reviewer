@@ -16,7 +16,8 @@ export const FeedbackInputSchema = z.object({
         'security', 'performance', 'architecture', 'correctness',
         'maintainability', 'scalability', 'testing', 'documentation'
     ])).optional().describe('Areas to focus the review on'),
-    customPrompt: z.string().optional().describe('Custom instructions for the reviewer')
+    customPrompt: z.string().optional().describe('Custom instructions for the reviewer'),
+    reasoningEffort: z.enum(['high', 'xhigh']).optional().describe('Codex reasoning effort level (default: high, use xhigh for deeper analysis)')
 });
 /**
  * Convert tool input to FeedbackRequest
@@ -28,7 +29,8 @@ function toFeedbackRequest(input) {
         outputType: input.outputType,
         analyzedFiles: input.analyzedFiles,
         focusAreas: input.focusAreas,
-        customPrompt: input.customPrompt
+        customPrompt: input.customPrompt,
+        reasoningEffort: input.reasoningEffort
     };
 }
 /**

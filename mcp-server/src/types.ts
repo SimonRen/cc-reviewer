@@ -19,6 +19,9 @@ export type FocusArea =
 // Supported CLI types
 export type CliType = 'codex' | 'gemini';
 
+// Reasoning effort level for Codex
+export type ReasoningEffort = 'high' | 'xhigh';
+
 // Request to get feedback from an external CLI
 export interface FeedbackRequest {
   workingDir: string;         // CLI working directory
@@ -27,6 +30,7 @@ export interface FeedbackRequest {
   analyzedFiles?: string[];   // File paths CC referenced
   focusAreas?: FocusArea[];   // Areas to focus review
   customPrompt?: string;      // User's custom instructions
+  reasoningEffort?: ReasoningEffort; // Codex reasoning effort (default: high)
 }
 
 // Successful feedback result

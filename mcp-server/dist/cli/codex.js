@@ -8,7 +8,7 @@ import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { build7SectionPrompt, buildDeveloperInstructions, buildRetryPrompt, isValidFeedbackOutput } from '../prompt.js';
 import { createTimeoutError, createCliNotFoundError, getSuggestion } from '../errors.js';
-const TIMEOUT_MS = 180000; // 3 minutes (Codex can be slow)
+const TIMEOUT_MS = 600000; // 10 minutes (xhigh reasoning can be slow)
 const MAX_RETRIES = 2;
 const MAX_BUFFER_SIZE = 1024 * 1024; // 1MB max buffer to prevent memory issues
 /**
@@ -45,7 +45,7 @@ async function runWithRetry(request, attempt, previousError, previousOutput) {
         // Codex exec doesn't have a separate system instruction flag
         const fullPrompt = `${developerInstructions}\n\n---\n\n${basePrompt}`;
         // Run the CLI
-        const result = await runCodexCli(fullPrompt, request.workingDir);
+        const result = await runCodexCli(fullPrompt, request.workingDir, request.reasoningEffort || 'high');
         // Check for CLI errors
         if (result.exitCode !== 0) {
             // Check for specific error patterns in stderr
@@ -160,17 +160,17 @@ async function runWithRetry(request, attempt, previousError, previousOutput) {
 /**
  * Execute the Codex CLI in non-interactive mode
  *
- * Uses: codex exec -m gpt-5.2-codex -c model_reasoning_effort="xhigh" \
+ * Uses: codex exec -m gpt-5.2-codex -c model_reasoning_effort="high|xhigh" \
  *   -c model_reasoning_summary_format=experimental \
  *   --dangerously-bypass-approvals-and-sandbox "<prompt>"
  */
-function runCodexCli(prompt, workingDir) {
+function runCodexCli(prompt, workingDir, reasoningEffort = 'high') {
     return new Promise((resolve, reject) => {
         // Build CLI arguments for non-interactive execution
         const args = [
             'exec',
             '-m', 'gpt-5.2-codex',
-            '-c', 'model_reasoning_effort=xhigh',
+            '-c', `model_reasoning_effort=${reasoningEffort}`,
             '-c', 'model_reasoning_summary_format=experimental',
             '--dangerously-bypass-approvals-and-sandbox',
             '--skip-git-repo-check',

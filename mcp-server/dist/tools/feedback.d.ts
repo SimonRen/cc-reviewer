@@ -9,6 +9,7 @@ export declare const FeedbackInputSchema: z.ZodObject<{
     analyzedFiles: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     focusAreas: z.ZodOptional<z.ZodArray<z.ZodEnum<["security", "performance", "architecture", "correctness", "maintainability", "scalability", "testing", "documentation"]>, "many">>;
     customPrompt: z.ZodOptional<z.ZodString>;
+    reasoningEffort: z.ZodOptional<z.ZodEnum<["high", "xhigh"]>>;
 }, "strip", z.ZodTypeAny, {
     workingDir: string;
     ccOutput: string;
@@ -16,6 +17,7 @@ export declare const FeedbackInputSchema: z.ZodObject<{
     analyzedFiles?: string[] | undefined;
     focusAreas?: ("security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation")[] | undefined;
     customPrompt?: string | undefined;
+    reasoningEffort?: "high" | "xhigh" | undefined;
 }, {
     workingDir: string;
     ccOutput: string;
@@ -23,6 +25,7 @@ export declare const FeedbackInputSchema: z.ZodObject<{
     analyzedFiles?: string[] | undefined;
     focusAreas?: ("security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation")[] | undefined;
     customPrompt?: string | undefined;
+    reasoningEffort?: "high" | "xhigh" | undefined;
 }>;
 export type FeedbackInput = z.infer<typeof FeedbackInputSchema>;
 /**
