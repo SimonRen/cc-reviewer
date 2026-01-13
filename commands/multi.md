@@ -1,53 +1,99 @@
 # Multi Feedback
 
-Get parallel reviews from both Codex and Gemini CLIs on Claude Code's recent work.
+Get parallel reviews from both Codex and Gemini, raw output for manual synthesis.
 
 ## Arguments
-- `$ARGUMENTS` - Optional: focus area or custom instructions (e.g., "security,performance", "Check error handling")
+- `$ARGUMENTS` - Optional: focus area or custom instructions
 
-## Instructions
+## When to Use
 
-Use the `multi_feedback` MCP tool to get feedback from both Codex and Gemini in parallel.
+- `/multi` - Raw parallel reviews, YOU synthesize
+- `/council` - Automatic consensus with confidence scores
 
-1. Determine what to review:
-   - If we just completed work, summarize the changes made
-   - If user provided context, use that
-   - Default: review the current working directory
+Use `/multi` when you want full control over synthesis.
 
-2. Call the `multi_feedback` tool with:
-   - `workingDir`: current working directory
-   - `ccOutput`: brief summary of recent changes or context
-   - `focus`: extracted from $ARGUMENTS if it's a known focus area (security, performance, architecture, correctness, maintainability, scalability, testing, documentation) - can be comma-separated
-   - `customInstructions`: $ARGUMENTS if it's custom text
+## Before Calling - PREPARE THE HANDOFF
 
-3. After receiving feedback - VALIDATE before accepting:
+### 1. Summarize What You Did (Brief!)
+```
+"Implemented caching layer for the product catalog API using Redis.
+Added cache invalidation on product updates."
+```
 
-   IMPORTANT: Do NOT blindly accept external feedback. You must:
+### 2. List Your Uncertainties
+```
+UNCERTAINTIES:
+- "Is the cache TTL appropriate for this data?"
+- "Does the invalidation handle all update scenarios?"
+- "Is the Redis connection pooling configured correctly?"
+```
 
-   a. **Verify file references exist**
-      - Check any mentioned file:line actually exists
-      - Flag hallucinated paths from either model
+### 3. Ask Specific Questions
+```
+QUESTIONS:
+- "Should I use write-through or write-behind caching?"
+- "Is there a race condition in the invalidation logic?"
+```
 
-   b. **Cross-check claims by reading code**
-      - Read the actual files mentioned
-      - Verify issues described match reality
+## Tool Invocation
 
-   c. **Mark your confidence level for each finding:**
-      - ✓✓ Verified (you checked the code yourself)
-      - ✓ Likely (plausible but not verified)
-      - ? Uncertain (needs more investigation)
-      - ✗ Rejected (you disagree after checking)
+Call `multi_feedback` with:
 
-   d. **Make YOUR recommendation**
-      - Don't just relay their findings
-      - Apply your own judgment
-      - You may disagree with both models
+```json
+{
+  "workingDir": "<current directory>",
+  "ccOutput": "<structured handoff>",
+  "outputType": "analysis",
+  "focusAreas": ["<from $ARGUMENTS>"]
+}
+```
 
-4. Synthesize multi-model feedback:
-   - **Consensus** (both agree): Higher confidence, but still verify
-   - **Conflicts** (they disagree): You decide who is right
-   - **Unique insights**: Evaluate each on merit
-   - Show validated findings with confidence levels
-   - Offer to incorporate only verified/likely suggestions
+### Structure your ccOutput:
+
+```
+SUMMARY:
+<what you did, 1-3 sentences>
+
+UNCERTAINTIES (verify these):
+1. <uncertainty>
+2. <uncertainty>
+
+QUESTIONS:
+1. <question>
+
+PRIORITY FILES:
+- <file>
+```
+
+## After Receiving Review
+
+You will receive separate reviews from each model.
+
+### Synthesize Manually
+
+1. **Find agreements** (both models say same thing)
+   - Higher confidence
+   - Still verify yourself
+
+2. **Identify conflicts** (they disagree)
+   - Read the code
+   - YOU decide who's right
+
+3. **Note unique insights**
+   - Findings only one model found
+   - Evaluate on merit
+
+4. **Verify all findings**
+   - Check file/line references exist
+   - Read actual code
+   - Mark your confidence:
+     - ✓✓ Verified
+     - ✓ Plausible
+     - ? Investigate
+     - ✗ Rejected
+
+5. **Make YOUR recommendation**
+   - Don't just relay findings
+   - Apply your judgment
 
 $ARGUMENTS

@@ -1,51 +1,91 @@
 # Gemini Feedback
 
-Get a second-opinion review from Google Gemini CLI on Claude Code's recent work.
+Get a review from Google Gemini CLI, specialized in architecture and large-scale analysis.
 
 ## Arguments
-- `$ARGUMENTS` - Optional: focus area or custom instructions (e.g., "architecture", "Review the API design")
+- `$ARGUMENTS` - Optional: focus area or custom instructions
 
-## Instructions
+## Gemini Strengths
+- **Architecture**: Design patterns, code structure
+- **Large Context**: Can analyze entire codebases
+- **Maintainability**: Code clarity, complexity
+- **Scalability**: System design concerns
 
-Use the `gemini_feedback` MCP tool to get feedback from Gemini CLI.
+## Before Calling - PREPARE THE HANDOFF
 
-1. Determine what to review:
-   - If we just completed work, summarize the changes made
-   - If user provided context, use that
-   - Default: review the current working directory
+### 1. Summarize What You Did (Brief!)
+```
+"Refactored the payment service to use the repository pattern,
+extracted common validation logic into a shared module."
+```
 
-2. Call the `gemini_feedback` tool with:
-   - `workingDir`: current working directory
-   - `ccOutput`: brief summary of recent changes or context
-   - `focus`: extracted from $ARGUMENTS if it's a known focus area (security, performance, architecture, correctness, maintainability, scalability, testing, documentation)
-   - `customInstructions`: $ARGUMENTS if it's custom text
+### 2. List Your Uncertainties
+What should Gemini verify?
 
-3. After receiving feedback - VALIDATE before accepting:
+```
+UNCERTAINTIES:
+- "Does the new abstraction layer add unnecessary complexity?"
+- "Is the module boundary in the right place?"
+```
 
-   IMPORTANT: Do NOT blindly accept external feedback. You must:
+### 3. Ask Specific Questions
+```
+QUESTIONS:
+- "Should PaymentValidator be its own service or stay as a utility?"
+- "Is there a better pattern for the retry logic?"
+```
 
-   a. **Verify file references exist**
-      - Check any mentioned file:line actually exists
-      - Flag hallucinated paths immediately
+## Tool Invocation
 
-   b. **Cross-check claims by reading code**
-      - Read the actual files mentioned
-      - Verify the issue described matches reality
+Call `gemini_feedback` with:
 
-   c. **Mark your confidence level for each finding:**
-      - ✓✓ Verified (you checked the code yourself)
-      - ✓ Likely (plausible but not verified)
-      - ? Uncertain (needs more investigation)
-      - ✗ Rejected (you disagree after checking)
+```json
+{
+  "workingDir": "<current directory>",
+  "ccOutput": "<structured handoff - see below>",
+  "outputType": "analysis",
+  "focusAreas": ["<from $ARGUMENTS>"]
+}
+```
 
-   d. **Make YOUR recommendation**
-      - Don't just relay their findings
-      - Apply your own judgment
-      - You may disagree with external feedback
+### Structure your ccOutput:
 
-4. Present synthesis:
-   - Show validated findings with confidence levels
-   - Highlight anything that looks like a hallucination
-   - Offer to incorporate only verified/likely suggestions
+```
+SUMMARY:
+<what you did, 1-3 sentences>
+
+UNCERTAINTIES (verify these):
+1. <your uncertainty>
+2. <another uncertainty>
+
+QUESTIONS:
+1. <specific question>
+
+KEY DECISIONS:
+- <decision>: <rationale>
+
+PRIORITY FILES:
+- <file to focus on>
+```
+
+## After Receiving Review
+
+1. **Verify file references exist**
+   - Check mentioned file:line locations
+   - Flag any that don't exist
+
+2. **Cross-check findings**
+   - Read the actual code
+   - Confirm the issue exists
+
+3. **Mark confidence:**
+   - ✓✓ Verified by you
+   - ✓ Plausible, not verified
+   - ? Needs investigation
+   - ✗ Rejected
+
+4. **Apply judgment**
+   - You may disagree with findings
+   - Make YOUR recommendation
 
 $ARGUMENTS

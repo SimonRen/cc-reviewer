@@ -1,19 +1,28 @@
 #!/usr/bin/env node
 /**
- * AI Reviewer MCP Server
+ * AI Reviewer MCP Server (Council Review Edition)
  *
  * Provides tools for getting second-opinion feedback from external AI CLIs
  * (Codex and Gemini) on Claude Code's work.
+ *
+ * Features:
+ * - Single model review (codex_feedback, gemini_feedback)
+ * - Multi-model parallel review (multi_feedback)
+ * - Council review with consensus (council_feedback) - NEW
+ * - Structured JSON output with confidence scores
+ * - Expert role specialization per focus area
  */
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
-import { handleCodexFeedback, handleGeminiFeedback, handleMultiFeedback, FeedbackInputSchema, TOOL_DEFINITIONS } from './tools/feedback.js';
+import { handleCodexFeedback, handleGeminiFeedback, handleMultiFeedback, handleCouncilFeedback, FeedbackInputSchema, CouncilInputSchema, TOOL_DEFINITIONS } from './tools/feedback.js';
 import { logCliStatus } from './cli/check.js';
+// Import adapters to register them
+import './adapters/index.js';
 // Create the MCP server
 const server = new Server({
     name: 'ai-reviewer',
-    version: '1.0.0',
+    version: '2.0.0',
 }, {
     capabilities: {
         tools: {},
@@ -26,6 +35,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             TOOL_DEFINITIONS.codex_feedback,
             TOOL_DEFINITIONS.gemini_feedback,
             TOOL_DEFINITIONS.multi_feedback,
+            TOOL_DEFINITIONS.council_feedback,
         ],
     };
 });
@@ -33,15 +43,23 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     try {
-        // Validate input
-        const input = FeedbackInputSchema.parse(args);
         switch (name) {
-            case 'codex_feedback':
+            case 'codex_feedback': {
+                const input = FeedbackInputSchema.parse(args);
                 return await handleCodexFeedback(input);
-            case 'gemini_feedback':
+            }
+            case 'gemini_feedback': {
+                const input = FeedbackInputSchema.parse(args);
                 return await handleGeminiFeedback(input);
-            case 'multi_feedback':
+            }
+            case 'multi_feedback': {
+                const input = FeedbackInputSchema.parse(args);
                 return await handleMultiFeedback(input);
+            }
+            case 'council_feedback': {
+                const input = CouncilInputSchema.parse(args);
+                return await handleCouncilFeedback(input);
+            }
             default:
                 return {
                     content: [{
@@ -69,7 +87,7 @@ async function main() {
     await logCliStatus();
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error('AI Reviewer MCP Server running on stdio');
+    console.error('AI Reviewer MCP Server v2.0 (Council Review) running on stdio');
 }
 main().catch((error) => {
     console.error('Fatal error:', error);

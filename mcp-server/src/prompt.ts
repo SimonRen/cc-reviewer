@@ -1,62 +1,168 @@
 /**
- * 7-Section Prompt Builder for External CLI Delegation
+ * Prompt Builder for Council Review
+ *
+ * Builds structured prompts that request JSON output from external CLIs.
+ * Supports expert roles for specialized reviews.
  */
 
-import { FeedbackRequest, CliType, REVIEWER_PERSONAS, FOCUS_AREA_DESCRIPTIONS } from './types.js';
+import { FocusArea, OutputType, FOCUS_AREA_DESCRIPTIONS } from './types.js';
+import { getReviewOutputJsonSchema } from './schema.js';
+import { ReviewRequest, ExpertRole, selectExpertRole, EXPERT_ROLES } from './adapters/base.js';
+
+// =============================================================================
+// JSON SCHEMA PROMPT SECTION
+// =============================================================================
 
 /**
- * Build the 7-section delegation prompt for external CLIs
+ * Generate the JSON schema section for the prompt
  */
-export function build7SectionPrompt(request: FeedbackRequest): string {
-  const {
-    workingDir,
-    ccOutput,
-    outputType,
-    analyzedFiles = [],
-    focusAreas = [],
-    customPrompt
-  } = request;
+function buildJsonSchemaSection(): string {
+  const schema = getReviewOutputJsonSchema();
+  return `OUTPUT FORMAT (JSON):
+You MUST respond with valid JSON matching this schema:
+\`\`\`json
+${JSON.stringify(schema, null, 2)}
+\`\`\`
 
-  const focusDescription = focusAreas.length > 0
-    ? focusAreas.map(f => `${f} (${FOCUS_AREA_DESCRIPTIONS[f]})`).join(', ')
+IMPORTANT:
+- Output ONLY the JSON object, no markdown wrapping, no explanation before/after
+- All fields marked "required" MUST be present
+- Use empty arrays [] for sections with no findings
+- Confidence scores are 0-1 (e.g., 0.85 for 85% confident)
+- Severity levels: critical > high > medium > low > info
+- Include file:line in location when you reference specific code`;
+}
+
+// =============================================================================
+// EXPERT ROLE PROMPT
+// =============================================================================
+
+/**
+ * Build the expert role section of the prompt
+ */
+function buildExpertSection(role: ExpertRole): string {
+  return `ROLE: ${role.name}
+
+${role.systemPrompt}
+
+EVALUATION CRITERIA:
+${role.evaluationCriteria.map((c, i) => `${i + 1}. ${c}`).join('\n')}`;
+}
+
+// =============================================================================
+// MAIN PROMPT BUILDER
+// =============================================================================
+
+export interface PromptBuildOptions {
+  /** Request details */
+  request: ReviewRequest;
+
+  /** Override the expert role */
+  expertRole?: ExpertRole;
+
+  /** Model identifier for the reviewer field */
+  reviewerName: string;
+
+  /** Whether to use JSON output (true) or legacy markdown (false) */
+  useJsonOutput?: boolean;
+
+  /** Retry context */
+  retryContext?: {
+    attemptNumber: number;
+    previousError: string;
+    previousOutput: string;
+  };
+}
+
+/**
+ * Build the main review prompt
+ */
+export function buildReviewPrompt(options: PromptBuildOptions): string {
+  const {
+    request,
+    expertRole,
+    reviewerName,
+    useJsonOutput = true,
+    retryContext,
+  } = options;
+
+  const role = expertRole || selectExpertRole(request.focusAreas);
+
+  const focusDescription = request.focusAreas && request.focusAreas.length > 0
+    ? request.focusAreas.map(f => `${f} (${FOCUS_AREA_DESCRIPTIONS[f]})`).join(', ')
     : 'General review';
 
-  const filesAnalyzed = analyzedFiles.length > 0
-    ? analyzedFiles.join(', ')
+  const filesAnalyzed = request.analyzedFiles && request.analyzedFiles.length > 0
+    ? request.analyzedFiles.join(', ')
     : 'Not specified';
 
-  const customInstructions = customPrompt
-    ? `\n  Special Instructions: ${customPrompt}`
-    : '';
+  const sections: string[] = [];
 
-  return `TASK: Review CC's ${outputType} and provide structured feedback.
+  // Section 1: Expert Role
+  sections.push(buildExpertSection(role));
 
-EXPECTED OUTCOME: Identify agreements, disagreements, additions, and alternatives.
+  // Section 2: Task Description
+  sections.push(`
+---
+
+TASK: Review Claude Code's ${request.outputType} and provide structured feedback.
+
+You are reviewing another AI assistant's (Claude Code) analysis of a codebase.
+Your job is to:
+1. VALIDATE correct findings (agreements)
+2. CHALLENGE incorrect assessments (disagreements)
+3. ADD issues they missed (new findings)
+4. SUGGEST alternatives where applicable
+5. ASSESS overall risk`);
+
+  // Section 3: Context
+  sections.push(`
+---
 
 CONTEXT:
-  Working Directory: ${workingDir}
-  Output Type: ${outputType}
+  Working Directory: ${request.workingDir}
+  Output Type: ${request.outputType}
+  Focus Areas: ${focusDescription}
   Files Analyzed: ${filesAnalyzed}
-  CC's Output:
-${indent(ccOutput, 4)}
+  Reviewer ID: ${reviewerName}
+
+CLAUDE CODE'S OUTPUT TO REVIEW:
+\`\`\`
+${request.ccOutput}
+\`\`\``);
+
+  // Section 4: Custom Instructions
+  if (request.customPrompt) {
+    sections.push(`
+---
+
+ADDITIONAL INSTRUCTIONS:
+${request.customPrompt}`);
+  }
+
+  // Section 5: Constraints
+  sections.push(`
+---
 
 CONSTRAINTS:
-  Focus Areas: ${focusDescription}
-  Advisory mode only (no file changes)
-  You have filesystem access${customInstructions}
+• You have filesystem access - READ files to verify claims
+• Do NOT modify any files (advisory mode only)
+• Reference specific file:line when making claims
+• Do NOT hallucinate file paths - verify they exist
+• Be skeptical - verify before agreeing with CC's findings`);
 
-MUST DO:
-  • Review CC's findings critically
-  • Verify claims by reading files yourself
-  • Reference specific file:line when relevant
-  • Follow OUTPUT FORMAT exactly
+  // Section 6: Output Format
+  if (useJsonOutput) {
+    sections.push(`
+---
 
-MUST NOT DO:
-  • Make any file changes
-  • Hallucinate file paths
-  • Return unstructured text
+${buildJsonSchemaSection()}`);
+  } else {
+    // Legacy markdown format for backwards compatibility
+    sections.push(`
+---
 
-OUTPUT FORMAT:
+OUTPUT FORMAT (Markdown):
 ## Agreements
 - [Finding]: [Why correct]
 
@@ -70,63 +176,215 @@ OUTPUT FORMAT:
 - [Topic]: [Alternative] - [Tradeoffs]
 
 ## Risk Assessment
-[Low/Medium/High] - [Reason]`;
+[Low/Medium/High] - [Reason]`);
+  }
+
+  // Section 7: Retry Context (if applicable)
+  if (retryContext) {
+    sections.push(`
+---
+
+⚠️ RETRY ATTEMPT ${retryContext.attemptNumber}/3
+
+Previous attempt failed with: ${retryContext.previousError}
+
+Previous output (truncated):
+${retryContext.previousOutput.slice(0, 500)}...
+
+Please ensure your response is valid JSON matching the schema exactly.`);
+  }
+
+  return sections.join('\n');
 }
 
+// =============================================================================
+// PEER REVIEW PROMPT
+// =============================================================================
+
 /**
- * Build the developer instructions (persona) for a specific CLI
+ * Build a prompt for peer review (one model reviewing another's output)
  */
-export function buildDeveloperInstructions(cli: CliType): string {
-  const persona = REVIEWER_PERSONAS[cli];
-  return `You are a ${persona.name} code review expert.
+export function buildPeerReviewPrompt(
+  reviewerName: string,
+  anonymizedReviewerId: string,
+  reviewToScore: string,
+  originalCcOutput: string
+): string {
+  return `ROLE: Peer Reviewer
 
-Focus on: ${persona.focus}
+You are evaluating another AI reviewer's analysis for accuracy and quality.
 
-Style: ${persona.style}
+---
 
-You are reviewing another AI assistant's (Claude Code) work on a codebase.
-Your job is to provide a second opinion - validate their findings, challenge
-incorrect assessments, and add anything they missed.
+ORIGINAL TASK:
+Claude Code produced this output that was being reviewed:
+\`\`\`
+${originalCcOutput}
+\`\`\`
 
-Be specific. Reference file paths and line numbers when relevant.
-Use the structured OUTPUT FORMAT provided in the prompt.`;
+---
+
+REVIEW TO EVALUATE (from ${anonymizedReviewerId}):
+\`\`\`
+${reviewToScore}
+\`\`\`
+
+---
+
+TASK: Score each finding in the review above.
+
+For each finding, assess:
+1. Is the finding valid? (Does the issue actually exist in the code?)
+2. Is it correctly categorized and described?
+3. Is the evidence accurate?
+
+OUTPUT FORMAT (JSON):
+{
+  "reviewer": "${reviewerName}",
+  "reviewed_model": "${anonymizedReviewerId}",
+  "scores": [
+    {
+      "finding_id": "<id from the review>",
+      "validity": "valid" | "questionable" | "invalid" | "cannot_assess",
+      "confidence": 0.0-1.0,
+      "notes": "<optional explanation>"
+    }
+  ],
+  "overall_quality": 0.0-1.0,
+  "summary": "<brief assessment of the review quality>"
+}
+
+Output ONLY the JSON, no other text.`;
+}
+
+// =============================================================================
+// LEGACY SUPPORT
+// =============================================================================
+
+// Re-export types for backwards compatibility
+export { FocusArea, OutputType };
+
+/**
+ * Legacy function - builds old-style 7-section prompt
+ * @deprecated Use buildReviewPrompt instead
+ */
+export function build7SectionPrompt(request: {
+  workingDir: string;
+  ccOutput: string;
+  outputType: OutputType;
+  analyzedFiles?: string[];
+  focusAreas?: FocusArea[];
+  customPrompt?: string;
+}): string {
+  return buildReviewPrompt({
+    request: {
+      workingDir: request.workingDir,
+      ccOutput: request.ccOutput,
+      outputType: request.outputType,
+      analyzedFiles: request.analyzedFiles,
+      focusAreas: request.focusAreas,
+      customPrompt: request.customPrompt,
+    },
+    reviewerName: 'external',
+    useJsonOutput: false, // Legacy uses markdown
+  });
 }
 
 /**
- * Build a retry prompt that includes previous attempt information
+ * Legacy function - builds developer instructions
+ * @deprecated Use buildReviewPrompt with expertRole instead
+ */
+export function buildDeveloperInstructions(cli: 'codex' | 'gemini'): string {
+  const roleMap = {
+    codex: EXPERT_ROLES.correctness_analyst,
+    gemini: EXPERT_ROLES.architect,
+  };
+  return buildExpertSection(roleMap[cli]);
+}
+
+/**
+ * Legacy function - builds retry prompt
+ * @deprecated Use buildReviewPrompt with retryContext instead
  */
 export function buildRetryPrompt(
-  request: FeedbackRequest,
+  request: {
+    workingDir: string;
+    ccOutput: string;
+    outputType: OutputType;
+    analyzedFiles?: string[];
+    focusAreas?: FocusArea[];
+    customPrompt?: string;
+  },
   attemptNumber: number,
   previousError: string,
   previousOutput: string
 ): string {
-  const basePrompt = build7SectionPrompt(request);
-
-  return `TASK: Review CC's ${request.outputType} (RETRY - attempt ${attemptNumber}/3)
-
-PREVIOUS ATTEMPT FAILED:
-  Error: ${previousError}
-  Raw output (truncated): ${previousOutput.slice(0, 300)}...
-
-ADDITIONAL INSTRUCTION: Follow the OUTPUT FORMAT exactly. Each section header
-must start with "## " and contain structured content.
-
-${basePrompt.split('\n').slice(1).join('\n')}`;
+  return buildReviewPrompt({
+    request: {
+      workingDir: request.workingDir,
+      ccOutput: request.ccOutput,
+      outputType: request.outputType,
+      analyzedFiles: request.analyzedFiles,
+      focusAreas: request.focusAreas,
+      customPrompt: request.customPrompt,
+    },
+    reviewerName: 'external',
+    useJsonOutput: false,
+    retryContext: {
+      attemptNumber,
+      previousError,
+      previousOutput,
+    },
+  });
 }
 
 /**
- * Helper to indent text
+ * Validate feedback output structure
+ * Now supports both JSON and legacy markdown formats
  */
-function indent(text: string, spaces: number): string {
-  const padding = ' '.repeat(spaces);
-  return text.split('\n').map(line => padding + line).join('\n');
+export function isValidFeedbackOutput(output: string): boolean {
+  // Try JSON first
+  try {
+    const jsonMatch = output.match(/```(?:json)?\s*([\s\S]*?)```/) || [null, output];
+    let jsonStr = jsonMatch[1] || output;
+
+    const jsonStart = jsonStr.indexOf('{');
+    const jsonEnd = jsonStr.lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd !== -1) {
+      jsonStr = jsonStr.slice(jsonStart, jsonEnd + 1);
+      const parsed = JSON.parse(jsonStr);
+
+      // Check for required fields
+      if (parsed.findings !== undefined &&
+          parsed.agreements !== undefined &&
+          parsed.disagreements !== undefined &&
+          parsed.risk_assessment !== undefined) {
+        return true;
+      }
+    }
+  } catch {
+    // Not valid JSON, try markdown
+  }
+
+  // Legacy markdown validation
+  const requiredSections = [
+    /^## Agreements$/m,
+    /^## Disagreements$/m,
+    /^## Additions$/m,
+    /^## Alternatives$/m,
+    /^## Risk Assessment$/m
+  ];
+
+  const hasRequiredSections = requiredSections.every(regex => regex.test(output));
+  const hasContent = output.length > 100;
+
+  return hasRequiredSections && hasContent;
 }
 
 /**
  * Detect output type from CC's output content
  */
-export function detectOutputType(ccOutput: string): 'findings' | 'plan' | 'proposal' | 'analysis' {
+export function detectOutputType(ccOutput: string): OutputType {
   if (/\b(vulnerab|injection|XSS|CSRF|SSRF|auth.*issue|security)/i.test(ccOutput)) {
     return 'findings';
   }
@@ -137,25 +395,4 @@ export function detectOutputType(ccOutput: string): 'findings' | 'plan' | 'propo
     return 'plan';
   }
   return 'analysis';
-}
-
-/**
- * Validate that external CLI output follows expected structure
- */
-export function isValidFeedbackOutput(output: string): boolean {
-  const requiredSections = [
-    /^## Agreements$/m,
-    /^## Disagreements$/m,
-    /^## Additions$/m,
-    /^## Alternatives$/m,
-    /^## Risk Assessment$/m
-  ];
-
-  // Must have all required sections: Agreements, Disagreements, Additions, Alternatives, Risk Assessment
-  const hasRequiredSections = requiredSections.every(regex => regex.test(output));
-
-  // Must not be empty or too short
-  const hasContent = output.length > 100;
-
-  return hasRequiredSections && hasContent;
 }
