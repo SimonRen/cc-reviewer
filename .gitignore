@@ -19,3 +19,6 @@ npm-debug.log*
 # Environment
 .env
 .env.local
+
+# Package manager locks (using npm)
+bun.lock
