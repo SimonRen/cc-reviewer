@@ -1,24 +1,34 @@
 {
   "name": "cc-reviewer",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Get second-opinion feedback from Codex/Gemini CLIs on Claude Code's work",
   "author": "SimonRen",
   "homepage": "https://github.com/SimonRen/cc-reviewer",
   "commands": [
     {
-      "name": "codex-review",
+      "name": "codex",
       "description": "Get Codex feedback on CC's recent work",
-      "file": "commands/codex-review.md"
+      "file": "commands/codex.md"
     },
     {
-      "name": "gemini-review",
+      "name": "codex-xhigh",
+      "description": "Get Codex feedback with xhigh reasoning effort",
+      "file": "commands/codex-xhigh.md"
+    },
+    {
+      "name": "gemini",
       "description": "Get Gemini feedback on CC's recent work",
-      "file": "commands/gemini-review.md"
+      "file": "commands/gemini.md"
     },
     {
-      "name": "multi-review",
+      "name": "multi",
       "description": "Get parallel review from both Codex and Gemini",
-      "file": "commands/multi-review.md"
+      "file": "commands/multi.md"
+    },
+    {
+      "name": "council",
+      "description": "Multi-model consensus review with verification",
+      "file": "commands/council.md"
     }
   ]
 }

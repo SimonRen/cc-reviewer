@@ -54,19 +54,21 @@ cp cc-reviewer/commands/*.md ~/.claude/commands/
 Then use:
 
 ```bash
-/codex-review                    # Review with Codex
-/codex-review security           # Focus on security
+/codex                    # Review with Codex
+/codex security           # Focus on security
+/codex-xhigh              # Codex with xhigh reasoning effort
 
-/gemini-review                   # Review with Gemini
-/gemini-review architecture      # Focus on architecture
+/gemini                   # Review with Gemini
+/gemini architecture      # Focus on architecture
 
-/multi-review                    # Both models in parallel
+/multi                    # Both models in parallel
+/council                  # Multi-model consensus with verification
 ```
 
 ## How It Works
 
 ```
-CC does work → User: /codex-review → External CLI reviews → CC synthesizes → Updated output
+CC does work → User: /codex → External CLI reviews → CC synthesizes → Updated output
 ```
 
 **Key Principles:**
