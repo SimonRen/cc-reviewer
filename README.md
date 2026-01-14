@@ -1,4 +1,4 @@
-# AI Reviewer Plugin for Claude Code
+# CC Reviewer - AI Code Review for Claude Code
 
 Get second-opinion feedback from OpenAI Codex and Google Gemini CLIs on Claude Code's work, then synthesize and incorporate.
 
@@ -54,13 +54,13 @@ cp cc-reviewer/commands/*.md ~/.claude/commands/
 Then use:
 
 ```bash
-/codex                    # Review with Codex
-/codex security           # Focus on security
+/codex-review                    # Review with Codex
+/codex-review security           # Focus on security
 
-/gemini                   # Review with Gemini
-/gemini architecture      # Focus on architecture
+/gemini-review                   # Review with Gemini
+/gemini-review architecture      # Focus on architecture
 
-/multi                    # Both models in parallel
+/multi-review                    # Both models in parallel
 ```
 
 ## How It Works
@@ -87,99 +87,43 @@ CC does work → User: /codex-review → External CLI reviews → CC synthesizes
 | `testing` | Test coverage, test quality |
 | `documentation` | Comments, docs, API docs |
 
-## Output Format
-
-External CLIs return structured feedback:
-
-```markdown
-## Agreements
-- [Finding]: [Why correct]
-
-## Disagreements
-- [Finding]: [Why wrong] - [Correct assessment]
-
-## Additions
-- [New finding]: [File:line] - [Impact]
-
-## Alternatives
-- [Topic]: [Alternative] - [Tradeoffs]
-
-## Risk Assessment
-[Low/Medium/High] - [Reason]
-```
-
 ## MCP Tools
 
-The plugin exposes three MCP tools:
+The plugin exposes four MCP tools:
 
 | Tool | Description |
 |------|-------------|
 | `codex_feedback` | Get Codex review (correctness, edge cases, performance) |
 | `gemini_feedback` | Get Gemini review (design patterns, scalability, tech debt) |
 | `multi_feedback` | Parallel review from both models |
+| `council_feedback` | Multi-model consensus with verification pipeline |
 
-## Project Structure
+## Output Format
 
-```
-ai-reviewer/
-├── README.md
-├── .gitignore
-├── .mcp.json                     # MCP server config
-├── .claude-plugin/
-│   └── plugin.json               # Plugin metadata
-├── commands/
-│   ├── codex-review.md           # /codex-review command
-│   ├── gemini-review.md          # /gemini-review command
-│   └── multi-review.md           # /multi-review command
-└── mcp-server/
-    ├── package.json
-    ├── tsconfig.json
-    └── src/
-        ├── index.ts              # MCP server entry
-        ├── types.ts              # TypeScript types
-        ├── prompt.ts             # 7-section prompt builder
-        ├── errors.ts             # Error handling
-        ├── cli/
-        │   ├── check.ts          # CLI availability
-        │   ├── codex.ts          # Codex wrapper
-        │   └── gemini.ts         # Gemini wrapper
-        └── tools/
-            └── feedback.ts       # MCP tool handlers
-```
-
-## CLI Configuration
-
-### Codex
-```bash
-codex exec -m gpt-5.2-codex \
-  -c model_reasoning_effort=xhigh \
-  -c model_reasoning_summary_format=experimental \
-  --dangerously-bypass-approvals-and-sandbox
-```
-
-### Gemini
-```bash
-gemini -p "<prompt>" --include-directories <workingDir>
-```
-
-## Error Handling
-
-| Error | Response |
-|-------|----------|
-| CLI not found | Install instructions + suggest other CLI |
-| Timeout (3min) | Suggest smaller scope or --focus |
-| Rate limit | Retry suggestion + alternative CLI |
-| Auth error | API key check + login command |
-| Invalid response | Auto-retry 2x, then show raw |
+External CLIs return structured JSON feedback with:
+- **Findings**: Issues with severity, confidence, location, and suggestions
+- **Agreements**: Validations of CC's correct assessments
+- **Disagreements**: Challenges to CC's claims with corrections
+- **Alternatives**: Different approaches with tradeoffs
+- **Risk Assessment**: Overall risk level with top concerns
 
 ## Development
 
 ```bash
 cd mcp-server
 npm install
-npm run build    # Build once
-npm run dev      # Watch mode
-npm start        # Run server
+npm run build       # Build once
+npm run dev         # Watch mode
+npm test            # Run tests
+npm run test:watch  # Watch mode tests
+npm start           # Run server
+```
+
+## Publishing
+
+Uses npm Trusted Publishing (OIDC, no tokens):
+```bash
+gh workflow run publish.yml -f version=patch  # or minor/major
 ```
 
 ## License

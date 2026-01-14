@@ -1,9 +1,9 @@
 {
-  "name": "ai-reviewer",
-  "version": "1.0.0",
+  "name": "cc-reviewer",
+  "version": "1.1.1",
   "description": "Get second-opinion feedback from Codex/Gemini CLIs on Claude Code's work",
-  "author": "jmulro",
-  "homepage": "https://github.com/jmulro/multi-cli",
+  "author": "SimonRen",
+  "homepage": "https://github.com/SimonRen/cc-reviewer",
   "commands": [
     {
       "name": "codex-review",
