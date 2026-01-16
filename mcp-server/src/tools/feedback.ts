@@ -431,7 +431,7 @@ Install at least one:
 export const TOOL_DEFINITIONS = {
   codex_feedback: {
     name: 'codex_feedback',
-    description: "Get Codex's review of Claude Code's work. Codex focuses on correctness, edge cases, and performance.",
+    description: "ONLY use when user explicitly requests '/codex' or 'review with codex'. Get external second-opinion from OpenAI Codex CLI. Codex focuses on correctness, edge cases, and performance. DO NOT use for general 'review' requests.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -476,7 +476,7 @@ export const TOOL_DEFINITIONS = {
   },
   gemini_feedback: {
     name: 'gemini_feedback',
-    description: "Get Gemini's review of Claude Code's work. Gemini focuses on design patterns, scalability, and tech debt.",
+    description: "ONLY use when user explicitly requests '/gemini' or 'review with gemini'. Get external second-opinion from Google Gemini CLI. Gemini focuses on design patterns, scalability, and tech debt. DO NOT use for general 'review' requests.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -516,7 +516,7 @@ export const TOOL_DEFINITIONS = {
   },
   multi_feedback: {
     name: 'multi_feedback',
-    description: "Get parallel reviews from all available AI CLIs (Codex and Gemini). Returns combined feedback for synthesis.",
+    description: "ONLY use when user explicitly requests '/multi' or 'review with both codex and gemini'. Get parallel second-opinions from both external CLIs (Codex and Gemini). Returns combined feedback for synthesis. DO NOT use for general 'review' requests.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -556,7 +556,7 @@ export const TOOL_DEFINITIONS = {
   },
   council_feedback: {
     name: 'council_feedback',
-    description: "Get a Council Review with automatic consensus calculation. Runs multiple models in parallel, detects agreements/conflicts, and synthesizes findings with confidence scores.",
+    description: "ONLY use when user explicitly requests council review or consensus-based feedback. Get external second-opinions from multiple CLIs with automatic consensus calculation. Runs Codex and Gemini in parallel, detects agreements/conflicts, and synthesizes findings with confidence scores. DO NOT use for general 'review' requests.",
     inputSchema: {
       type: 'object',
       properties: {
