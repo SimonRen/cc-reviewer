@@ -113,11 +113,13 @@ export class GeminiAdapter {
             }
             // Parse the output
             let output = parseReviewOutput(result.stdout);
+            let usedFallback = false;
             // If JSON parsing fails, try legacy markdown
             if (!output) {
                 output = parseLegacyMarkdownOutput(result.stdout, 'gemini');
+                usedFallback = true;
             }
-            // If still no valid output, retry or fail
+            // If no valid output, retry or fail
             if (!output) {
                 if (attempt < MAX_RETRIES) {
                     return this.runWithRetry(request, attempt + 1, startTime, 'Output did not match expected JSON schema', result.stdout);
@@ -133,6 +135,17 @@ export class GeminiAdapter {
                     rawOutput: result.stdout,
                     executionTimeMs: Date.now() - startTime,
                 };
+            }
+            // If we used fallback and got minimal data, retry
+            if (usedFallback && attempt < MAX_RETRIES) {
+                const hasMinimalData = output.findings.length === 0 &&
+                    output.agreements.length === 0 &&
+                    output.disagreements.length === 0 &&
+                    output.risk_assessment.summary === 'Unable to parse structured risk assessment';
+                if (hasMinimalData) {
+                    console.error(`[gemini] Received incomplete output (fallback parse with no data), retrying...`);
+                    return this.runWithRetry(request, attempt + 1, startTime, 'Received markdown output instead of JSON. Please provide valid JSON output.', result.stdout);
+                }
             }
             return {
                 success: true,
@@ -191,6 +204,7 @@ export class GeminiAdapter {
             // Gemini CLI uses positional prompt and --yolo for auto-approval
             const args = [
                 '--yolo',
+                '--output-format', 'json', // Force JSON output
                 '--include-directories', workingDir,
                 prompt
             ];
@@ -203,6 +217,11 @@ export class GeminiAdapter {
             let stderr = '';
             let truncated = false;
             let inactivityTimer;
+            const cliStartTime = Date.now();
+            let lastProgressTime = cliStartTime;
+            let dataChunks = 0;
+            // Show initial progress message
+            console.error('[gemini] Running review...');
             const maxTimer = setTimeout(() => {
                 proc.kill('SIGTERM');
                 reject(new Error('MAX_TIMEOUT'));
@@ -217,6 +236,18 @@ export class GeminiAdapter {
             resetInactivityTimer();
             proc.stdout.on('data', (data) => {
                 resetInactivityTimer();
+                dataChunks++;
+                // Show progress dot every 5 chunks
+                if (dataChunks % 5 === 0) {
+                    process.stderr.write('.');
+                }
+                // Show elapsed time every 10 seconds
+                const now = Date.now();
+                if (now - lastProgressTime > 10000) {
+                    const elapsed = Math.round((now - cliStartTime) / 1000);
+                    console.error(` [${elapsed}s]`);
+                    lastProgressTime = now;
+                }
                 if (stdout.length < MAX_BUFFER_SIZE) {
                     stdout += data.toString();
                     if (stdout.length > MAX_BUFFER_SIZE) {
@@ -237,11 +268,14 @@ export class GeminiAdapter {
             proc.on('close', (code) => {
                 clearTimeout(inactivityTimer);
                 clearTimeout(maxTimer);
+                const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
+                console.error(` ✓ [${elapsed}s]`);
                 resolve({ stdout, stderr, exitCode: code ?? -1, truncated });
             });
             proc.on('error', (err) => {
                 clearTimeout(inactivityTimer);
                 clearTimeout(maxTimer);
+                console.error(' ✗');
                 reject(err);
             });
         });

@@ -6,7 +6,9 @@
  */
 
 import { spawn } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, writeFileSync, unlinkSync, mkdtempSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import {
   ReviewerAdapter,
   ReviewerCapabilities,
@@ -16,7 +18,7 @@ import {
   registerAdapter,
   EXPERT_ROLES,
 } from './base.js';
-import { ReviewOutput, parseReviewOutput, parseLegacyMarkdownOutput } from '../schema.js';
+import { ReviewOutput, parseReviewOutput, parseLegacyMarkdownOutput, getReviewOutputJsonSchema } from '../schema.js';
 import { buildReviewPrompt, isValidFeedbackOutput } from '../prompt.js';
 import {
   buildSimpleHandoff,
@@ -276,6 +278,18 @@ export class CodexAdapter implements ReviewerAdapter {
     reasoningEffort: 'high' | 'xhigh'
   ): Promise<{ stdout: string; stderr: string; exitCode: number; truncated: boolean }> {
     return new Promise((resolve, reject) => {
+      // Create temp schema file for structured output
+      let schemaFile: string | null = null;
+      try {
+        const tempDir = mkdtempSync(join(tmpdir(), 'codex-schema-'));
+        schemaFile = join(tempDir, 'schema.json');
+        const schema = getReviewOutputJsonSchema();
+        writeFileSync(schemaFile, JSON.stringify(schema, null, 2), 'utf-8');
+      } catch (err) {
+        console.error('[codex] Warning: Failed to create schema file, continuing without structured output:', err);
+        schemaFile = null;
+      }
+
       const args = [
         'exec',
         '-m', 'gpt-5.2-codex',
@@ -284,8 +298,14 @@ export class CodexAdapter implements ReviewerAdapter {
         '--dangerously-bypass-approvals-and-sandbox',
         '--skip-git-repo-check',
         '-C', workingDir,
-        prompt
       ];
+
+      // Add schema enforcement if available
+      if (schemaFile) {
+        args.push('--output-schema', schemaFile);
+      }
+
+      args.push(prompt);
 
       const proc = spawn('codex', args, {
         cwd: workingDir,
@@ -360,6 +380,16 @@ export class CodexAdapter implements ReviewerAdapter {
         clearTimeout(maxTimer);
         const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
         console.error(` ✓ [${elapsed}s]`);
+
+        // Cleanup temp schema file
+        if (schemaFile) {
+          try {
+            unlinkSync(schemaFile);
+          } catch {
+            // Ignore cleanup errors
+          }
+        }
+
         resolve({ stdout, stderr, exitCode: code ?? -1, truncated });
       });
 
@@ -367,6 +397,16 @@ export class CodexAdapter implements ReviewerAdapter {
         clearTimeout(inactivityTimer);
         clearTimeout(maxTimer);
         console.error(' ✗');
+
+        // Cleanup temp schema file
+        if (schemaFile) {
+          try {
+            unlinkSync(schemaFile);
+          } catch {
+            // Ignore cleanup errors
+          }
+        }
+
         reject(err);
       });
     });

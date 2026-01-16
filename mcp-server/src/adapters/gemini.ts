@@ -278,6 +278,7 @@ export class GeminiAdapter implements ReviewerAdapter {
       // Gemini CLI uses positional prompt and --yolo for auto-approval
       const args = [
         '--yolo',
+        '--output-format', 'json',  // Force JSON output
         '--include-directories', workingDir,
         prompt
       ];

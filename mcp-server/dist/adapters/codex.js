@@ -5,9 +5,11 @@
  * Specializes in correctness, edge cases, and performance analysis.
  */
 import { spawn } from 'child_process';
-import { existsSync } from 'fs';
+import { existsSync, writeFileSync, unlinkSync, mkdtempSync } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
 import { registerAdapter, } from './base.js';
-import { parseReviewOutput, parseLegacyMarkdownOutput } from '../schema.js';
+import { parseReviewOutput, parseLegacyMarkdownOutput, getReviewOutputJsonSchema } from '../schema.js';
 import { buildSimpleHandoff, buildHandoffPrompt, selectRole, } from '../handoff.js';
 // =============================================================================
 // CONFIGURATION
@@ -113,11 +115,13 @@ export class CodexAdapter {
             }
             // Parse the output
             let output = parseReviewOutput(result.stdout);
+            let usedFallback = false;
             // If JSON parsing fails, try legacy markdown
             if (!output) {
                 output = parseLegacyMarkdownOutput(result.stdout, 'codex');
+                usedFallback = true;
             }
-            // If still no valid output, retry or fail
+            // If no valid output, retry or fail
             if (!output) {
                 if (attempt < MAX_RETRIES) {
                     return this.runWithRetry(request, attempt + 1, startTime, 'Output did not match expected JSON schema', result.stdout);
@@ -133,6 +137,17 @@ export class CodexAdapter {
                     rawOutput: result.stdout,
                     executionTimeMs: Date.now() - startTime,
                 };
+            }
+            // If we used fallback and got minimal data, retry
+            if (usedFallback && attempt < MAX_RETRIES) {
+                const hasMinimalData = output.findings.length === 0 &&
+                    output.agreements.length === 0 &&
+                    output.disagreements.length === 0 &&
+                    output.risk_assessment.summary === 'Unable to parse structured risk assessment';
+                if (hasMinimalData) {
+                    console.error(`[codex] Received incomplete output (fallback parse with no data), retrying...`);
+                    return this.runWithRetry(request, attempt + 1, startTime, 'Received markdown output instead of JSON. Please provide valid JSON output.', result.stdout);
+                }
             }
             return {
                 success: true,
@@ -188,6 +203,18 @@ export class CodexAdapter {
     }
     runCli(prompt, workingDir, reasoningEffort) {
         return new Promise((resolve, reject) => {
+            // Create temp schema file for structured output
+            let schemaFile = null;
+            try {
+                const tempDir = mkdtempSync(join(tmpdir(), 'codex-schema-'));
+                schemaFile = join(tempDir, 'schema.json');
+                const schema = getReviewOutputJsonSchema();
+                writeFileSync(schemaFile, JSON.stringify(schema, null, 2), 'utf-8');
+            }
+            catch (err) {
+                console.error('[codex] Warning: Failed to create schema file, continuing without structured output:', err);
+                schemaFile = null;
+            }
             const args = [
                 'exec',
                 '-m', 'gpt-5.2-codex',
@@ -196,8 +223,12 @@ export class CodexAdapter {
                 '--dangerously-bypass-approvals-and-sandbox',
                 '--skip-git-repo-check',
                 '-C', workingDir,
-                prompt
             ];
+            // Add schema enforcement if available
+            if (schemaFile) {
+                args.push('--output-schema', schemaFile);
+            }
+            args.push(prompt);
             const proc = spawn('codex', args, {
                 cwd: workingDir,
                 stdio: ['ignore', 'pipe', 'pipe'],
@@ -207,6 +238,11 @@ export class CodexAdapter {
             let stderr = '';
             let truncated = false;
             let inactivityTimer;
+            const cliStartTime = Date.now();
+            let lastProgressTime = cliStartTime;
+            let dataChunks = 0;
+            // Show initial progress message
+            console.error(`[codex] Running review with ${reasoningEffort} reasoning...`);
             const maxTimer = setTimeout(() => {
                 proc.kill('SIGTERM');
                 reject(new Error('MAX_TIMEOUT'));
@@ -221,6 +257,18 @@ export class CodexAdapter {
             resetInactivityTimer();
             proc.stdout.on('data', (data) => {
                 resetInactivityTimer();
+                dataChunks++;
+                // Show progress dot every 5 chunks
+                if (dataChunks % 5 === 0) {
+                    process.stderr.write('.');
+                }
+                // Show elapsed time every 10 seconds
+                const now = Date.now();
+                if (now - lastProgressTime > 10000) {
+                    const elapsed = Math.round((now - cliStartTime) / 1000);
+                    console.error(` [${elapsed}s]`);
+                    lastProgressTime = now;
+                }
                 if (stdout.length < MAX_BUFFER_SIZE) {
                     stdout += data.toString();
                     if (stdout.length > MAX_BUFFER_SIZE) {
@@ -241,11 +289,32 @@ export class CodexAdapter {
             proc.on('close', (code) => {
                 clearTimeout(inactivityTimer);
                 clearTimeout(maxTimer);
+                const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
+                console.error(` ✓ [${elapsed}s]`);
+                // Cleanup temp schema file
+                if (schemaFile) {
+                    try {
+                        unlinkSync(schemaFile);
+                    }
+                    catch {
+                        // Ignore cleanup errors
+                    }
+                }
                 resolve({ stdout, stderr, exitCode: code ?? -1, truncated });
             });
             proc.on('error', (err) => {
                 clearTimeout(inactivityTimer);
                 clearTimeout(maxTimer);
+                console.error(' ✗');
+                // Cleanup temp schema file
+                if (schemaFile) {
+                    try {
+                        unlinkSync(schemaFile);
+                    }
+                    catch {
+                        // Ignore cleanup errors
+                    }
+                }
                 reject(err);
             });
         });
