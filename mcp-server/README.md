@@ -39,6 +39,18 @@ npm install -g @google/gemini-cli
 gemini  # follow auth prompts
 ```
 
+## Usage
+
+These tools provide **external second-opinion reviews** from Codex and Gemini CLIs. They are designed to complement Claude Code's native review capabilities, not replace them.
+
+**When to use:**
+- `/codex` or "review with codex" - Get external Codex review
+- `/gemini` or "review with gemini" - Get external Gemini review
+- `/multi` - Get parallel reviews from both CLIs
+- Council review - Get consensus-based feedback from multiple models
+
+**For regular reviews:** Just say "review" and Claude Code will use its native capabilities. These external tools are only invoked when explicitly requested.
+
 ## Slash Commands (Optional)
 
 Copy the slash commands to your global commands folder:
