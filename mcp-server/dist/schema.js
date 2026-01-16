@@ -171,6 +171,7 @@ export const CouncilReviewOutput = z.object({
 export function getReviewOutputJsonSchema() {
     return {
         type: 'object',
+        additionalProperties: false,
         required: ['reviewer', 'findings', 'agreements', 'disagreements', 'alternatives', 'risk_assessment'],
         properties: {
             reviewer: { type: 'string' },
@@ -179,6 +180,7 @@ export function getReviewOutputJsonSchema() {
                 type: 'array',
                 items: {
                     type: 'object',
+                    additionalProperties: false,
                     required: ['id', 'category', 'severity', 'confidence', 'title', 'description'],
                     properties: {
                         id: { type: 'string' },
@@ -194,6 +196,7 @@ export function getReviewOutputJsonSchema() {
                         description: { type: 'string' },
                         location: {
                             type: 'object',
+                            additionalProperties: false,
                             required: ['file'], // file is required to match Zod schema
                             properties: {
                                 file: { type: 'string', description: 'Relative file path from working directory' },
@@ -215,6 +218,7 @@ export function getReviewOutputJsonSchema() {
                 type: 'array',
                 items: {
                     type: 'object',
+                    additionalProperties: false,
                     required: ['original_claim', 'assessment', 'confidence'],
                     properties: {
                         original_claim: { type: 'string' },
@@ -229,6 +233,7 @@ export function getReviewOutputJsonSchema() {
                 type: 'array',
                 items: {
                     type: 'object',
+                    additionalProperties: false,
                     required: ['original_claim', 'issue', 'confidence', 'reason'],
                     properties: {
                         original_claim: { type: 'string' },
@@ -244,6 +249,7 @@ export function getReviewOutputJsonSchema() {
                 type: 'array',
                 items: {
                     type: 'object',
+                    additionalProperties: false,
                     required: ['topic', 'current_approach', 'alternative', 'tradeoffs', 'recommendation'],
                     properties: {
                         topic: { type: 'string' },
@@ -251,6 +257,7 @@ export function getReviewOutputJsonSchema() {
                         alternative: { type: 'string' },
                         tradeoffs: {
                             type: 'object',
+                            additionalProperties: false,
                             properties: {
                                 pros: { type: 'array', items: { type: 'string' } },
                                 cons: { type: 'array', items: { type: 'string' } }
@@ -262,6 +269,7 @@ export function getReviewOutputJsonSchema() {
             },
             risk_assessment: {
                 type: 'object',
+                additionalProperties: false,
                 required: ['overall_level', 'score', 'summary', 'top_concerns'],
                 properties: {
                     overall_level: { type: 'string', enum: ['critical', 'high', 'medium', 'low', 'minimal'] },
