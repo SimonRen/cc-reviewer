@@ -114,23 +114,6 @@ describe('ReviewFinding Schema', () => {
 // =============================================================================
 
 describe('JSON Schema Consistency', () => {
-  it('should have file as required in location', () => {
-    const schema = getReviewOutputJsonSchema() as any;
-    const findingSchema = schema.properties.findings.items;
-    const locationSchema = findingSchema.properties.location;
-
-    expect(locationSchema.required).toContain('file');
-  });
-
-  it('should include column fields in location', () => {
-    const schema = getReviewOutputJsonSchema() as any;
-    const findingSchema = schema.properties.findings.items;
-    const locationSchema = findingSchema.properties.location;
-
-    expect(locationSchema.properties).toHaveProperty('column_start');
-    expect(locationSchema.properties).toHaveProperty('column_end');
-  });
-
   it('should have all severity levels', () => {
     const schema = getReviewOutputJsonSchema() as any;
     const severityEnum = schema.properties.findings.items.properties.severity.enum;

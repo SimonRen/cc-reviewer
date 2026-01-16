@@ -175,7 +175,6 @@ export function getReviewOutputJsonSchema() {
         required: ['reviewer', 'findings', 'agreements', 'disagreements', 'alternatives', 'risk_assessment'],
         properties: {
             reviewer: { type: 'string' },
-            timestamp: { type: 'string', format: 'date-time' },
             findings: {
                 type: 'array',
                 items: {
@@ -193,24 +192,7 @@ export function getReviewOutputJsonSchema() {
                         severity: { type: 'string', enum: ['critical', 'high', 'medium', 'low', 'info'] },
                         confidence: { type: 'number', minimum: 0, maximum: 1 },
                         title: { type: 'string', maxLength: 120 },
-                        description: { type: 'string' },
-                        location: {
-                            type: 'object',
-                            additionalProperties: false,
-                            required: ['file'], // file is required to match Zod schema
-                            properties: {
-                                file: { type: 'string', description: 'Relative file path from working directory' },
-                                line_start: { type: 'integer', minimum: 1, description: 'Starting line number' },
-                                line_end: { type: 'integer', minimum: 1, description: 'Ending line number' },
-                                column_start: { type: 'integer', minimum: 0, description: 'Starting column' },
-                                column_end: { type: 'integer', minimum: 0, description: 'Ending column' }
-                            }
-                        },
-                        evidence: { type: 'string' },
-                        suggestion: { type: 'string' },
-                        cwe_id: { type: 'string', pattern: '^CWE-\\d+$' },
-                        owasp_category: { type: 'string' },
-                        tags: { type: 'array', items: { type: 'string' } }
+                        description: { type: 'string' }
                     }
                 }
             },
@@ -223,9 +205,7 @@ export function getReviewOutputJsonSchema() {
                     properties: {
                         original_claim: { type: 'string' },
                         assessment: { type: 'string', enum: ['correct', 'mostly_correct', 'partially_correct'] },
-                        confidence: { type: 'number', minimum: 0, maximum: 1 },
-                        supporting_evidence: { type: 'string' },
-                        notes: { type: 'string' }
+                        confidence: { type: 'number', minimum: 0, maximum: 1 }
                     }
                 }
             },
@@ -239,9 +219,7 @@ export function getReviewOutputJsonSchema() {
                         original_claim: { type: 'string' },
                         issue: { type: 'string', enum: ['incorrect', 'misleading', 'incomplete', 'outdated', 'hallucinated'] },
                         confidence: { type: 'number', minimum: 0, maximum: 1 },
-                        reason: { type: 'string' },
-                        correction: { type: 'string' },
-                        evidence: { type: 'string' }
+                        reason: { type: 'string' }
                     }
                 }
             },
@@ -258,6 +236,7 @@ export function getReviewOutputJsonSchema() {
                         tradeoffs: {
                             type: 'object',
                             additionalProperties: false,
+                            required: ['pros', 'cons'],
                             properties: {
                                 pros: { type: 'array', items: { type: 'string' } },
                                 cons: { type: 'array', items: { type: 'string' } }
@@ -275,12 +254,9 @@ export function getReviewOutputJsonSchema() {
                     overall_level: { type: 'string', enum: ['critical', 'high', 'medium', 'low', 'minimal'] },
                     score: { type: 'number', minimum: 0, maximum: 100 },
                     summary: { type: 'string', maxLength: 300 },
-                    top_concerns: { type: 'array', items: { type: 'string' }, maxItems: 5 },
-                    mitigations: { type: 'array', items: { type: 'string' } }
+                    top_concerns: { type: 'array', items: { type: 'string' }, maxItems: 5 }
                 }
-            },
-            files_examined: { type: 'array', items: { type: 'string' } },
-            execution_notes: { type: 'string' }
+            }
         }
     };
 }
