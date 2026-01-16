@@ -275,6 +275,12 @@ export class CodexAdapter implements ReviewerAdapter {
       let stderr = '';
       let truncated = false;
       let inactivityTimer: NodeJS.Timeout;
+      const cliStartTime = Date.now();
+      let lastProgressTime = cliStartTime;
+      let dataChunks = 0;
+
+      // Show initial progress message
+      console.error(`[codex] Running review with ${reasoningEffort} reasoning...`);
 
       const maxTimer = setTimeout(() => {
         proc.kill('SIGTERM');
@@ -293,6 +299,21 @@ export class CodexAdapter implements ReviewerAdapter {
 
       proc.stdout.on('data', (data) => {
         resetInactivityTimer();
+        dataChunks++;
+
+        // Show progress dot every 5 chunks
+        if (dataChunks % 5 === 0) {
+          process.stderr.write('.');
+        }
+
+        // Show elapsed time every 10 seconds
+        const now = Date.now();
+        if (now - lastProgressTime > 10000) {
+          const elapsed = Math.round((now - cliStartTime) / 1000);
+          console.error(` [${elapsed}s]`);
+          lastProgressTime = now;
+        }
+
         if (stdout.length < MAX_BUFFER_SIZE) {
           stdout += data.toString();
           if (stdout.length > MAX_BUFFER_SIZE) {
@@ -315,12 +336,15 @@ export class CodexAdapter implements ReviewerAdapter {
       proc.on('close', (code) => {
         clearTimeout(inactivityTimer);
         clearTimeout(maxTimer);
+        const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
+        console.error(` ✓ [${elapsed}s]`);
         resolve({ stdout, stderr, exitCode: code ?? -1, truncated });
       });
 
       proc.on('error', (err) => {
         clearTimeout(inactivityTimer);
         clearTimeout(maxTimer);
+        console.error(' ✗');
         reject(err);
       });
     });
