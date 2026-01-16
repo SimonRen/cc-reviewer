@@ -160,13 +160,15 @@ export class CodexAdapter implements ReviewerAdapter {
 
       // Parse the output
       let output = parseReviewOutput(result.stdout);
+      let usedFallback = false;
 
       // If JSON parsing fails, try legacy markdown
       if (!output) {
         output = parseLegacyMarkdownOutput(result.stdout, 'codex');
+        usedFallback = true;
       }
 
-      // If still no valid output, retry or fail
+      // If no valid output, retry or fail
       if (!output) {
         if (attempt < MAX_RETRIES) {
           return this.runWithRetry(
@@ -189,6 +191,26 @@ export class CodexAdapter implements ReviewerAdapter {
           rawOutput: result.stdout,
           executionTimeMs: Date.now() - startTime,
         };
+      }
+
+      // If we used fallback and got minimal data, retry
+      if (usedFallback && attempt < MAX_RETRIES) {
+        const hasMinimalData =
+          output.findings.length === 0 &&
+          output.agreements.length === 0 &&
+          output.disagreements.length === 0 &&
+          output.risk_assessment.summary === 'Unable to parse structured risk assessment';
+
+        if (hasMinimalData) {
+          console.error(`[codex] Received incomplete output (fallback parse with no data), retrying...`);
+          return this.runWithRetry(
+            request,
+            attempt + 1,
+            startTime,
+            'Received markdown output instead of JSON. Please provide valid JSON output.',
+            result.stdout
+          );
+        }
       }
 
       return {
