@@ -17,6 +17,7 @@ import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
 import { handleCodexFeedback, handleGeminiFeedback, handleMultiFeedback, handleCouncilFeedback, FeedbackInputSchema, CouncilInputSchema, TOOL_DEFINITIONS } from './tools/feedback.js';
 import { logCliStatus } from './cli/check.js';
+import { installCommands } from './commands.js';
 // Import adapters to register them
 import './adapters/index.js';
 // Create the MCP server
@@ -83,6 +84,14 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 // Start the server
 async function main() {
+    // Auto-install slash commands
+    const result = installCommands();
+    if (result.success) {
+        console.error(`[cc-reviewer] Installed ${result.installed.length} slash commands`);
+    }
+    else {
+        console.error(`[cc-reviewer] Warning: Could not install commands: ${result.error}`);
+    }
     // Log CLI availability status on startup
     await logCliStatus();
     const transport = new StdioServerTransport();
