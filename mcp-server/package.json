@@ -5,10 +5,12 @@
   "type": "module",
   "main": "dist/index.js",
   "bin": {
-    "cc-reviewer": "dist/index.js"
+    "cc-reviewer": "dist/index.js",
+    "cc-reviewer-setup": "dist/setup.js"
   },
   "files": [
     "dist/**/*",
+    "commands/**/*",
     "README.md",
     "LICENSE"
   ],

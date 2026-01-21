@@ -4,11 +4,19 @@ Get second-opinion feedback from OpenAI Codex and Google Gemini CLIs on Claude C
 
 ## Quick Install
 
+**Step 1: Add the MCP server**
 ```bash
 claude mcp add -s user cc-reviewer -- npx -y cc-reviewer
 ```
 
-That's it! Restart Claude Code and the tools are available.
+**Step 2: Install slash commands**
+```bash
+npx cc-reviewer-setup
+```
+
+**Step 3: Restart Claude Code**
+
+The MCP tools and slash commands (`/codex`, `/gemini`, `/multi`, `/council`) are now available.
 
 Verify with:
 ```bash
@@ -51,19 +59,9 @@ These tools provide **external second-opinion reviews** from Codex and Gemini CL
 
 **For regular reviews:** Just say "review" and Claude Code will use its native capabilities. These external tools are only invoked when explicitly requested.
 
-## Slash Commands (Optional)
+## Slash Commands
 
-Copy the slash commands to your global commands folder:
-
-```bash
-# Clone repo (if not already)
-git clone https://github.com/SimonRen/cc-reviewer.git
-
-# Copy commands
-cp cc-reviewer/commands/*.md ~/.claude/commands/
-```
-
-Then use:
+After running `npx cc-reviewer-setup`, these commands are available:
 
 ```bash
 /codex                    # Review with Codex
