@@ -2,7 +2,7 @@
  * Shared module for slash command installation
  *
  * Used by both:
- * - setup.ts (manual CLI tool: npx cc-reviewer-commands)
+ * - setup.ts (manual CLI tool: npx cc-reviewer-setup)
  * - index.ts (auto-install on MCP server startup)
  */
 export interface InstallResult {
