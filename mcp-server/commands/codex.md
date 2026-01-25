@@ -1,4 +1,4 @@
-# Codex Feedback
+# Codex Review
 
 Get a review from OpenAI Codex CLI, specialized in correctness and security.
 
@@ -35,7 +35,7 @@ QUESTIONS:
 
 ## Tool Invocation
 
-Call `codex_feedback` with:
+Call `codex_review` with:
 
 ```json
 {

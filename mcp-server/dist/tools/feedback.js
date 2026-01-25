@@ -2,15 +2,15 @@
  * MCP Tool Implementations
  *
  * Provides two levels of review:
- * 1. Single model review (codex_feedback, gemini_feedback)
- * 2. Multi-model parallel review (multi_feedback)
+ * 1. Single model review (codex_review, gemini_review)
+ * 2. Multi-model parallel review (multi_review)
  */
 import { z } from 'zod';
 import { getAdapter, getAvailableAdapters, selectExpertRole, } from '../adapters/index.js';
 // =============================================================================
 // INPUT SCHEMAS
 // =============================================================================
-export const FeedbackInputSchema = z.object({
+export const ReviewInputSchema = z.object({
     workingDir: z.string().describe('Working directory for the CLI to operate in'),
     ccOutput: z.string().describe("Claude Code's output to review (findings, plan, analysis)"),
     outputType: z.enum(['plan', 'findings', 'analysis', 'proposal']).describe('Type of output being reviewed'),
@@ -133,7 +133,7 @@ function formatErrorResponse(error, suggestion) {
 // =============================================================================
 // SINGLE MODEL HANDLERS
 // =============================================================================
-export async function handleCodexFeedback(input) {
+export async function handleCodexReview(input) {
     const adapter = getAdapter('codex');
     if (!adapter) {
         return {
@@ -148,7 +148,7 @@ export async function handleCodexFeedback(input) {
         return {
             content: [{
                     type: 'text',
-                    text: '❌ Codex CLI not found.\n\nInstall with: npm install -g @openai/codex\n\nAlternative: Use gemini_feedback instead'
+                    text: '❌ Codex CLI not found.\n\nInstall with: npm install -g @openai/codex\n\nAlternative: Use gemini_review instead'
                 }]
         };
     }
@@ -162,7 +162,7 @@ export async function handleCodexFeedback(input) {
             }]
     };
 }
-export async function handleGeminiFeedback(input) {
+export async function handleGeminiReview(input) {
     const adapter = getAdapter('gemini');
     if (!adapter) {
         return {
@@ -177,7 +177,7 @@ export async function handleGeminiFeedback(input) {
         return {
             content: [{
                     type: 'text',
-                    text: '❌ Gemini CLI not found.\n\nInstall with: npm install -g @google/gemini-cli\n\nAlternative: Use codex_feedback instead'
+                    text: '❌ Gemini CLI not found.\n\nInstall with: npm install -g @google/gemini-cli\n\nAlternative: Use codex_review instead'
                 }]
         };
     }
@@ -194,7 +194,7 @@ export async function handleGeminiFeedback(input) {
 // =============================================================================
 // MULTI-MODEL HANDLER
 // =============================================================================
-export async function handleMultiFeedback(input) {
+export async function handleMultiReview(input) {
     const request = toReviewRequest(input);
     // Get all available adapters
     const availableAdapters = await getAvailableAdapters();
@@ -277,8 +277,8 @@ Install at least one:
 // TOOL DEFINITIONS
 // =============================================================================
 export const TOOL_DEFINITIONS = {
-    codex_feedback: {
-        name: 'codex_feedback',
+    codex_review: {
+        name: 'codex_review',
         description: "ONLY use when user explicitly requests '/codex' or 'review with codex'. Get external second-opinion from OpenAI Codex CLI. Codex focuses on correctness, edge cases, and performance. DO NOT use for general 'review' requests.",
         inputSchema: {
             type: 'object',
@@ -322,8 +322,8 @@ export const TOOL_DEFINITIONS = {
             required: ['workingDir', 'ccOutput', 'outputType']
         }
     },
-    gemini_feedback: {
-        name: 'gemini_feedback',
+    gemini_review: {
+        name: 'gemini_review',
         description: "ONLY use when user explicitly requests '/gemini' or 'review with gemini'. Get external second-opinion from Google Gemini CLI. Gemini focuses on design patterns, scalability, and tech debt. DO NOT use for general 'review' requests.",
         inputSchema: {
             type: 'object',
@@ -362,9 +362,9 @@ export const TOOL_DEFINITIONS = {
             required: ['workingDir', 'ccOutput', 'outputType']
         }
     },
-    multi_feedback: {
-        name: 'multi_feedback',
-        description: "ONLY use when user explicitly requests '/multi' or 'review with both codex and gemini'. Get parallel second-opinions from both external CLIs (Codex and Gemini). Returns combined feedback for synthesis. DO NOT use for general 'review' requests.",
+    multi_review: {
+        name: 'multi_review',
+        description: "ONLY use when user explicitly requests '/multi' or 'review with both codex and gemini'. Get parallel second-opinions from both external CLIs (Codex and Gemini). Returns combined reviews for synthesis. DO NOT use for general 'review' requests.",
         inputSchema: {
             type: 'object',
             properties: {

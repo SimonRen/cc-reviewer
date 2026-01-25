@@ -1,4 +1,4 @@
-# Multi Feedback
+# Multi Review
 
 Get parallel reviews from both Codex and Gemini, raw output for manual synthesis.
 
@@ -34,7 +34,7 @@ QUESTIONS:
 
 ## Tool Invocation
 
-Call `multi_feedback` with:
+Call `multi_review` with:
 
 ```json
 {

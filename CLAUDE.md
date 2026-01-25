@@ -37,7 +37,7 @@ Or create a GitHub release to auto-publish.
 This is an MCP (Model Context Protocol) server that provides AI code review tools to Claude Code. External AI CLIs (Codex, Gemini) review Claude's work and return structured feedback.
 
 **Core Flow:**
-1. Claude Code calls MCP tools (`codex_feedback`, `gemini_feedback`, `multi_feedback`)
+1. Claude Code calls MCP tools (`codex_review`, `gemini_review`, `multi_review`)
 2. Tools invoke external AI CLIs with Claude's work + working directory
 3. CLIs read files directly from filesystem and return structured JSON
 4. Pipeline verifies findings (file exists? line valid? evidence matches?)
@@ -46,7 +46,7 @@ This is an MCP (Model Context Protocol) server that provides AI code review tool
 **Key Modules:**
 
 - `index.ts` - MCP server entry point, tool routing, auto-installs slash commands on startup
-- `tools/feedback.ts` - MCP tool implementations (`handleCodexFeedback`, `handleGeminiFeedback`, etc.) and `TOOL_DEFINITIONS`
+- `tools/feedback.ts` - MCP tool implementations (`handleCodexReview`, `handleGeminiReview`, etc.) and `TOOL_DEFINITIONS`
 - `adapters/base.ts` - Adapter interface + registry for AI reviewers. Expert roles (security_auditor, performance_engineer, architect, correctness_analyst) provide specialized prompts. `selectExpertRole()` picks role based on focus areas
 - `adapters/codex.ts`, `adapters/gemini.ts` - CLI-specific implementations that spawn external processes
 - `pipeline.ts` - Finding verification pipeline. `FileCache` for performance. Path traversal protection with `resolve()` + `normalize()`. `verifyFinding()` adjusts confidence based on evidence matching

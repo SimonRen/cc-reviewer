@@ -2,19 +2,19 @@
 /**
  * AI Reviewer MCP Server
  *
- * Provides tools for getting second-opinion feedback from external AI CLIs
+ * Provides tools for getting second-opinion reviews from external AI CLIs
  * (Codex and Gemini) on Claude Code's work.
  *
  * Features:
- * - Single model review (codex_feedback, gemini_feedback)
- * - Multi-model parallel review (multi_feedback)
+ * - Single model review (codex_review, gemini_review)
+ * - Multi-model parallel review (multi_review)
  * - Structured JSON output with confidence scores
  * - Expert role specialization per focus area
  */
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
-import { handleCodexFeedback, handleGeminiFeedback, handleMultiFeedback, FeedbackInputSchema, TOOL_DEFINITIONS } from './tools/feedback.js';
+import { handleCodexReview, handleGeminiReview, handleMultiReview, ReviewInputSchema, TOOL_DEFINITIONS } from './tools/feedback.js';
 import { logCliStatus } from './cli/check.js';
 import { installCommands } from './commands.js';
 // Import adapters to register them
@@ -32,9 +32,9 @@ const server = new Server({
 server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
         tools: [
-            TOOL_DEFINITIONS.codex_feedback,
-            TOOL_DEFINITIONS.gemini_feedback,
-            TOOL_DEFINITIONS.multi_feedback,
+            TOOL_DEFINITIONS.codex_review,
+            TOOL_DEFINITIONS.gemini_review,
+            TOOL_DEFINITIONS.multi_review,
         ],
     };
 });
@@ -43,17 +43,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     try {
         switch (name) {
-            case 'codex_feedback': {
-                const input = FeedbackInputSchema.parse(args);
-                return await handleCodexFeedback(input);
+            case 'codex_review': {
+                const input = ReviewInputSchema.parse(args);
+                return await handleCodexReview(input);
             }
-            case 'gemini_feedback': {
-                const input = FeedbackInputSchema.parse(args);
-                return await handleGeminiFeedback(input);
+            case 'gemini_review': {
+                const input = ReviewInputSchema.parse(args);
+                return await handleGeminiReview(input);
             }
-            case 'multi_feedback': {
-                const input = FeedbackInputSchema.parse(args);
-                return await handleMultiFeedback(input);
+            case 'multi_review': {
+                const input = ReviewInputSchema.parse(args);
+                return await handleMultiReview(input);
             }
             default:
                 return {

@@ -99,13 +99,13 @@ CC does work → User: /codex → External CLI reviews → CC synthesizes → Up
 
 ## MCP Tools
 
-The plugin exposes four MCP tools:
+The plugin exposes three MCP tools:
 
 | Tool | Description |
 |------|-------------|
-| `codex_feedback` | Get Codex review (correctness, edge cases, performance) |
-| `gemini_feedback` | Get Gemini review (design patterns, scalability, tech debt) |
-| `multi_feedback` | Parallel review from both models |
+| `codex_review` | Get Codex review (correctness, edge cases, performance) |
+| `gemini_review` | Get Gemini review (design patterns, scalability, tech debt) |
+| `multi_review` | Parallel review from both models |
 
 ## Output Format
 

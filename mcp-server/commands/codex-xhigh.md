@@ -7,14 +7,14 @@ Get a deep-thinking review from OpenAI Codex CLI with xhigh reasoning effort.
 
 ## Instructions
 
-Use the `codex_feedback` MCP tool with `reasoningEffort: "xhigh"` for deeper analysis.
+Use the `codex_review` MCP tool with `reasoningEffort: "xhigh"` for deeper analysis.
 
 1. Determine what to review:
    - If we just completed work, summarize the changes made
    - If user provided context, use that
    - Default: review the current working directory
 
-2. Call the `codex_feedback` tool with:
+2. Call the `codex_review` tool with:
    - `workingDir`: current working directory
    - `ccOutput`: brief summary of recent changes or context
    - `reasoningEffort`: "xhigh" (this is the key difference from /codex)

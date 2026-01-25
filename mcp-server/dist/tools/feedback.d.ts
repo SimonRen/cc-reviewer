@@ -2,11 +2,11 @@
  * MCP Tool Implementations
  *
  * Provides two levels of review:
- * 1. Single model review (codex_feedback, gemini_feedback)
- * 2. Multi-model parallel review (multi_feedback)
+ * 1. Single model review (codex_review, gemini_review)
+ * 2. Multi-model parallel review (multi_review)
  */
 import { z } from 'zod';
-export declare const FeedbackInputSchema: z.ZodObject<{
+export declare const ReviewInputSchema: z.ZodObject<{
     workingDir: z.ZodString;
     ccOutput: z.ZodString;
     outputType: z.ZodEnum<["plan", "findings", "analysis", "proposal"]>;
@@ -31,27 +31,27 @@ export declare const FeedbackInputSchema: z.ZodObject<{
     customPrompt?: string | undefined;
     reasoningEffort?: "high" | "xhigh" | undefined;
 }>;
-export type FeedbackInput = z.infer<typeof FeedbackInputSchema>;
-export declare function handleCodexFeedback(input: FeedbackInput): Promise<{
+export type ReviewInput = z.infer<typeof ReviewInputSchema>;
+export declare function handleCodexReview(input: ReviewInput): Promise<{
     content: Array<{
         type: 'text';
         text: string;
     }>;
 }>;
-export declare function handleGeminiFeedback(input: FeedbackInput): Promise<{
+export declare function handleGeminiReview(input: ReviewInput): Promise<{
     content: Array<{
         type: 'text';
         text: string;
     }>;
 }>;
-export declare function handleMultiFeedback(input: FeedbackInput): Promise<{
+export declare function handleMultiReview(input: ReviewInput): Promise<{
     content: Array<{
         type: 'text';
         text: string;
     }>;
 }>;
 export declare const TOOL_DEFINITIONS: {
-    codex_feedback: {
+    codex_review: {
         name: string;
         description: string;
         inputSchema: {
@@ -98,7 +98,7 @@ export declare const TOOL_DEFINITIONS: {
             required: string[];
         };
     };
-    gemini_feedback: {
+    gemini_review: {
         name: string;
         description: string;
         inputSchema: {
@@ -140,7 +140,7 @@ export declare const TOOL_DEFINITIONS: {
             required: string[];
         };
     };
-    multi_feedback: {
+    multi_review: {
         name: string;
         description: string;
         inputSchema: {

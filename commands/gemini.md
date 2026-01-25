@@ -1,4 +1,4 @@
-# Gemini Feedback
+# Gemini Review
 
 Get a review from Google Gemini CLI, specialized in architecture and large-scale analysis.
 
@@ -37,7 +37,7 @@ QUESTIONS:
 
 ## Tool Invocation
 
-Call `gemini_feedback` with:
+Call `gemini_review` with:
 
 ```json
 {
