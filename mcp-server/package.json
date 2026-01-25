@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "bin": {
     "cc-reviewer": "dist/index.js",
-    "cc-reviewer-setup": "dist/setup.js"
+    "cc-reviewer-commands": "dist/setup.js"
   },
   "files": [
     "dist/**/*",

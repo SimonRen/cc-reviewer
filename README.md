@@ -11,7 +11,7 @@ claude mcp add -s user cc-reviewer -- npx -y cc-reviewer
 
 **Step 2: Install slash commands**
 ```bash
-npx cc-reviewer-setup
+npx cc-reviewer-commands
 ```
 
 **Step 3: Restart Claude Code**
@@ -61,7 +61,7 @@ These tools provide **external second-opinion reviews** from Codex and Gemini CL
 
 ## Slash Commands
 
-After running `npx cc-reviewer-setup`, these commands are available:
+After running `npx cc-reviewer-commands`, these commands are available:
 
 ```bash
 /codex                    # Review with Codex
