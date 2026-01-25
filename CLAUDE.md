@@ -37,7 +37,7 @@ Or create a GitHub release to auto-publish.
 This is an MCP (Model Context Protocol) server that provides AI code review tools to Claude Code. External AI CLIs (Codex, Gemini) review Claude's work and return structured feedback.
 
 **Core Flow:**
-1. Claude Code calls MCP tools (`codex_feedback`, `gemini_feedback`, `multi_feedback`, `council_feedback`)
+1. Claude Code calls MCP tools (`codex_feedback`, `gemini_feedback`, `multi_feedback`)
 2. Tools invoke external AI CLIs with Claude's work + working directory
 3. CLIs read files directly from filesystem and return structured JSON
 4. Pipeline verifies findings (file exists? line valid? evidence matches?)
@@ -67,7 +67,6 @@ Markdown files that define user-facing commands (auto-installed to `~/.claude/co
 - `/codex` - Review with Codex (focus: correctness, edge cases, performance)
 - `/gemini` - Review with Gemini (focus: design patterns, scalability, tech debt)
 - `/multi` - Both models in parallel
-- `/council` - Multi-model consensus with verification pipeline
 
 ## External CLI Requirements
 

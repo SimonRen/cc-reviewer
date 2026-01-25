@@ -45,13 +45,13 @@ export declare const DecisionSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     decision: string;
     rationale: string;
-    tradeoffs?: string | undefined;
     alternatives?: string[] | undefined;
+    tradeoffs?: string | undefined;
 }, {
     decision: string;
     rationale: string;
-    tradeoffs?: string | undefined;
     alternatives?: string[] | undefined;
+    tradeoffs?: string | undefined;
 }>;
 export type Decision = z.infer<typeof DecisionSchema>;
 /**
@@ -105,13 +105,13 @@ export declare const HandoffSchema: z.ZodObject<{
     }, "strip", z.ZodTypeAny, {
         decision: string;
         rationale: string;
-        tradeoffs?: string | undefined;
         alternatives?: string[] | undefined;
+        tradeoffs?: string | undefined;
     }, {
         decision: string;
         rationale: string;
-        tradeoffs?: string | undefined;
         alternatives?: string[] | undefined;
+        tradeoffs?: string | undefined;
     }>, "many">>;
     questions: z.ZodOptional<z.ZodArray<z.ZodObject<{
         question: z.ZodString;
@@ -144,8 +144,8 @@ export declare const HandoffSchema: z.ZodObject<{
     decisions?: {
         decision: string;
         rationale: string;
-        tradeoffs?: string | undefined;
         alternatives?: string[] | undefined;
+        tradeoffs?: string | undefined;
     }[] | undefined;
     questions?: {
         question: string;
@@ -169,8 +169,8 @@ export declare const HandoffSchema: z.ZodObject<{
     decisions?: {
         decision: string;
         rationale: string;
-        tradeoffs?: string | undefined;
         alternatives?: string[] | undefined;
+        tradeoffs?: string | undefined;
     }[] | undefined;
     questions?: {
         question: string;

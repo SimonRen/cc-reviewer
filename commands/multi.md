@@ -7,10 +7,7 @@ Get parallel reviews from both Codex and Gemini, raw output for manual synthesis
 
 ## When to Use
 
-- `/multi` - Raw parallel reviews, YOU synthesize
-- `/council` - Automatic consensus with confidence scores
-
-Use `/multi` when you want full control over synthesis.
+Use `/multi` when you want parallel reviews from both Codex and Gemini.
 
 ## Before Calling - PREPARE THE HANDOFF
 

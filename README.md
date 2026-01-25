@@ -16,7 +16,7 @@ npx cc-reviewer-commands
 
 **Step 3: Restart Claude Code**
 
-The MCP tools and slash commands (`/codex`, `/gemini`, `/multi`, `/council`) are now available.
+The MCP tools and slash commands (`/codex`, `/gemini`, `/multi`) are now available.
 
 Verify with:
 ```bash
@@ -72,7 +72,6 @@ After running `npx cc-reviewer-commands`, these commands are available:
 /gemini architecture      # Focus on architecture
 
 /multi                    # Both models in parallel
-/council                  # Multi-model consensus with verification
 ```
 
 ## How It Works
@@ -108,7 +107,6 @@ The plugin exposes four MCP tools:
 | `codex_feedback` | Get Codex review (correctness, edge cases, performance) |
 | `gemini_feedback` | Get Gemini review (design patterns, scalability, tech debt) |
 | `multi_feedback` | Parallel review from both models |
-| `council_feedback` | Multi-model consensus with verification pipeline |
 
 ## Output Format
 

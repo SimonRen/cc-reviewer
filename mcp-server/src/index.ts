@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * AI Reviewer MCP Server (Council Review Edition)
+ * AI Reviewer MCP Server
  *
  * Provides tools for getting second-opinion feedback from external AI CLIs
  * (Codex and Gemini) on Claude Code's work.
@@ -8,7 +8,6 @@
  * Features:
  * - Single model review (codex_feedback, gemini_feedback)
  * - Multi-model parallel review (multi_feedback)
- * - Council review with consensus (council_feedback) - NEW
  * - Structured JSON output with confidence scores
  * - Expert role specialization per focus area
  */
@@ -24,9 +23,7 @@ import {
   handleCodexFeedback,
   handleGeminiFeedback,
   handleMultiFeedback,
-  handleCouncilFeedback,
   FeedbackInputSchema,
-  CouncilInputSchema,
   TOOL_DEFINITIONS
 } from './tools/feedback.js';
 import { logCliStatus } from './cli/check.js';
@@ -55,7 +52,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       TOOL_DEFINITIONS.codex_feedback,
       TOOL_DEFINITIONS.gemini_feedback,
       TOOL_DEFINITIONS.multi_feedback,
-      TOOL_DEFINITIONS.council_feedback,
     ],
   };
 });
@@ -79,11 +75,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'multi_feedback': {
         const input = FeedbackInputSchema.parse(args);
         return await handleMultiFeedback(input);
-      }
-
-      case 'council_feedback': {
-        const input = CouncilInputSchema.parse(args);
-        return await handleCouncilFeedback(input);
       }
 
       default:
@@ -122,7 +113,7 @@ async function main() {
 
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error('AI Reviewer MCP Server v2.0 (Council Review) running on stdio');
+  console.error('AI Reviewer MCP Server running on stdio');
 }
 
 main().catch((error) => {

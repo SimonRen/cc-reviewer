@@ -63,12 +63,12 @@ export declare const ReviewFinding: z.ZodObject<{
     owasp_category: z.ZodOptional<z.ZodString>;
     tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
 }, "strip", z.ZodTypeAny, {
-    id: string;
-    category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-    severity: "critical" | "high" | "medium" | "low" | "info";
-    confidence: number;
+    severity: "info" | "high" | "critical" | "medium" | "low";
     title: string;
     description: string;
+    category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+    confidence: number;
+    id: string;
     location?: {
         file: string;
         line_start?: number | undefined;
@@ -82,12 +82,12 @@ export declare const ReviewFinding: z.ZodObject<{
     owasp_category?: string | undefined;
     tags?: string[] | undefined;
 }, {
-    id: string;
-    category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-    severity: "critical" | "high" | "medium" | "low" | "info";
-    confidence: number;
+    severity: "info" | "high" | "critical" | "medium" | "low";
     title: string;
     description: string;
+    category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+    confidence: number;
+    id: string;
     location?: {
         file: string;
         line_start?: number | undefined;
@@ -131,16 +131,16 @@ export declare const Disagreement: z.ZodObject<{
     evidence: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     confidence: number;
+    reason: string;
     original_claim: string;
     issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-    reason: string;
     evidence?: string | undefined;
     correction?: string | undefined;
 }, {
     confidence: number;
+    reason: string;
     original_claim: string;
     issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-    reason: string;
     evidence?: string | undefined;
     correction?: string | undefined;
 }>;
@@ -162,21 +162,21 @@ export declare const Alternative: z.ZodObject<{
     recommendation: z.ZodEnum<["strongly_prefer", "consider", "situational", "informational"]>;
 }, "strip", z.ZodTypeAny, {
     topic: string;
-    current_approach: string;
-    alternative: string;
     tradeoffs: {
         pros: string[];
         cons: string[];
     };
+    current_approach: string;
+    alternative: string;
     recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
 }, {
     topic: string;
-    current_approach: string;
-    alternative: string;
     tradeoffs: {
         pros: string[];
         cons: string[];
     };
+    current_approach: string;
+    alternative: string;
     recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
 }>;
 export type Alternative = z.infer<typeof Alternative>;
@@ -187,15 +187,15 @@ export declare const RiskAssessment: z.ZodObject<{
     top_concerns: z.ZodArray<z.ZodString, "many">;
     mitigations: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
 }, "strip", z.ZodTypeAny, {
-    overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-    score: number;
     summary: string;
+    overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+    score: number;
     top_concerns: string[];
     mitigations?: string[] | undefined;
 }, {
-    overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-    score: number;
     summary: string;
+    overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+    score: number;
     top_concerns: string[];
     mitigations?: string[] | undefined;
 }>;
@@ -235,12 +235,12 @@ export declare const ReviewOutput: z.ZodObject<{
         owasp_category: z.ZodOptional<z.ZodString>;
         tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     }, "strip", z.ZodTypeAny, {
-        id: string;
-        category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-        severity: "critical" | "high" | "medium" | "low" | "info";
-        confidence: number;
+        severity: "info" | "high" | "critical" | "medium" | "low";
         title: string;
         description: string;
+        category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+        confidence: number;
+        id: string;
         location?: {
             file: string;
             line_start?: number | undefined;
@@ -254,12 +254,12 @@ export declare const ReviewOutput: z.ZodObject<{
         owasp_category?: string | undefined;
         tags?: string[] | undefined;
     }, {
-        id: string;
-        category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-        severity: "critical" | "high" | "medium" | "low" | "info";
-        confidence: number;
+        severity: "info" | "high" | "critical" | "medium" | "low";
         title: string;
         description: string;
+        category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+        confidence: number;
+        id: string;
         location?: {
             file: string;
             line_start?: number | undefined;
@@ -301,16 +301,16 @@ export declare const ReviewOutput: z.ZodObject<{
         evidence: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
         confidence: number;
+        reason: string;
         original_claim: string;
         issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-        reason: string;
         evidence?: string | undefined;
         correction?: string | undefined;
     }, {
         confidence: number;
+        reason: string;
         original_claim: string;
         issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-        reason: string;
         evidence?: string | undefined;
         correction?: string | undefined;
     }>, "many">;
@@ -331,21 +331,21 @@ export declare const ReviewOutput: z.ZodObject<{
         recommendation: z.ZodEnum<["strongly_prefer", "consider", "situational", "informational"]>;
     }, "strip", z.ZodTypeAny, {
         topic: string;
-        current_approach: string;
-        alternative: string;
         tradeoffs: {
             pros: string[];
             cons: string[];
         };
+        current_approach: string;
+        alternative: string;
         recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
     }, {
         topic: string;
-        current_approach: string;
-        alternative: string;
         tradeoffs: {
             pros: string[];
             cons: string[];
         };
+        current_approach: string;
+        alternative: string;
         recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
     }>, "many">;
     risk_assessment: z.ZodObject<{
@@ -355,29 +355,28 @@ export declare const ReviewOutput: z.ZodObject<{
         top_concerns: z.ZodArray<z.ZodString, "many">;
         mitigations: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     }, "strip", z.ZodTypeAny, {
-        overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-        score: number;
         summary: string;
+        overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+        score: number;
         top_concerns: string[];
         mitigations?: string[] | undefined;
     }, {
-        overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-        score: number;
         summary: string;
+        overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+        score: number;
         top_concerns: string[];
         mitigations?: string[] | undefined;
     }>;
     files_examined: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     execution_notes: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    reviewer: string;
     findings: {
-        id: string;
-        category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-        severity: "critical" | "high" | "medium" | "low" | "info";
-        confidence: number;
+        severity: "info" | "high" | "critical" | "medium" | "low";
         title: string;
         description: string;
+        category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+        confidence: number;
+        id: string;
         location?: {
             file: string;
             line_start?: number | undefined;
@@ -391,6 +390,17 @@ export declare const ReviewOutput: z.ZodObject<{
         owasp_category?: string | undefined;
         tags?: string[] | undefined;
     }[];
+    alternatives: {
+        topic: string;
+        tradeoffs: {
+            pros: string[];
+            cons: string[];
+        };
+        current_approach: string;
+        alternative: string;
+        recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
+    }[];
+    reviewer: string;
     agreements: {
         confidence: number;
         original_claim: string;
@@ -400,26 +410,16 @@ export declare const ReviewOutput: z.ZodObject<{
     }[];
     disagreements: {
         confidence: number;
+        reason: string;
         original_claim: string;
         issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-        reason: string;
         evidence?: string | undefined;
         correction?: string | undefined;
     }[];
-    alternatives: {
-        topic: string;
-        current_approach: string;
-        alternative: string;
-        tradeoffs: {
-            pros: string[];
-            cons: string[];
-        };
-        recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
-    }[];
     risk_assessment: {
-        overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-        score: number;
         summary: string;
+        overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+        score: number;
         top_concerns: string[];
         mitigations?: string[] | undefined;
     };
@@ -427,14 +427,13 @@ export declare const ReviewOutput: z.ZodObject<{
     files_examined?: string[] | undefined;
     execution_notes?: string | undefined;
 }, {
-    reviewer: string;
     findings: {
-        id: string;
-        category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-        severity: "critical" | "high" | "medium" | "low" | "info";
-        confidence: number;
+        severity: "info" | "high" | "critical" | "medium" | "low";
         title: string;
         description: string;
+        category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+        confidence: number;
+        id: string;
         location?: {
             file: string;
             line_start?: number | undefined;
@@ -448,6 +447,17 @@ export declare const ReviewOutput: z.ZodObject<{
         owasp_category?: string | undefined;
         tags?: string[] | undefined;
     }[];
+    alternatives: {
+        topic: string;
+        tradeoffs: {
+            pros: string[];
+            cons: string[];
+        };
+        current_approach: string;
+        alternative: string;
+        recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
+    }[];
+    reviewer: string;
     agreements: {
         confidence: number;
         original_claim: string;
@@ -457,26 +467,16 @@ export declare const ReviewOutput: z.ZodObject<{
     }[];
     disagreements: {
         confidence: number;
+        reason: string;
         original_claim: string;
         issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-        reason: string;
         evidence?: string | undefined;
         correction?: string | undefined;
     }[];
-    alternatives: {
-        topic: string;
-        current_approach: string;
-        alternative: string;
-        tradeoffs: {
-            pros: string[];
-            cons: string[];
-        };
-        recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
-    }[];
     risk_assessment: {
-        overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-        score: number;
         summary: string;
+        overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+        score: number;
         top_concerns: string[];
         mitigations?: string[] | undefined;
     };
@@ -583,12 +583,12 @@ export declare const ConsensusFinding: z.ZodObject<{
     owasp_category: z.ZodOptional<z.ZodString>;
     tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
 }, "strip", z.ZodTypeAny, {
-    id: string;
-    category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-    severity: "critical" | "high" | "medium" | "low" | "info";
-    confidence: number;
+    severity: "info" | "high" | "critical" | "medium" | "low";
     title: string;
     description: string;
+    category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+    confidence: number;
+    id: string;
     consensus_score: number;
     agreement_count: number;
     sources: string[];
@@ -606,12 +606,12 @@ export declare const ConsensusFinding: z.ZodObject<{
     tags?: string[] | undefined;
     peer_validation?: "validated" | "mixed" | "disputed" | "unreviewed" | undefined;
 }, {
-    id: string;
-    category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-    severity: "critical" | "high" | "medium" | "low" | "info";
-    confidence: number;
+    severity: "info" | "high" | "critical" | "medium" | "low";
     title: string;
     description: string;
+    category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+    confidence: number;
+    id: string;
     consensus_score: number;
     agreement_count: number;
     sources: string[];
@@ -666,12 +666,12 @@ export declare const CouncilReviewOutput: z.ZodObject<{
             owasp_category: z.ZodOptional<z.ZodString>;
             tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
         }, "strip", z.ZodTypeAny, {
-            id: string;
-            category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-            severity: "critical" | "high" | "medium" | "low" | "info";
-            confidence: number;
+            severity: "info" | "high" | "critical" | "medium" | "low";
             title: string;
             description: string;
+            category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+            confidence: number;
+            id: string;
             location?: {
                 file: string;
                 line_start?: number | undefined;
@@ -685,12 +685,12 @@ export declare const CouncilReviewOutput: z.ZodObject<{
             owasp_category?: string | undefined;
             tags?: string[] | undefined;
         }, {
-            id: string;
-            category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-            severity: "critical" | "high" | "medium" | "low" | "info";
-            confidence: number;
+            severity: "info" | "high" | "critical" | "medium" | "low";
             title: string;
             description: string;
+            category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+            confidence: number;
+            id: string;
             location?: {
                 file: string;
                 line_start?: number | undefined;
@@ -732,16 +732,16 @@ export declare const CouncilReviewOutput: z.ZodObject<{
             evidence: z.ZodOptional<z.ZodString>;
         }, "strip", z.ZodTypeAny, {
             confidence: number;
+            reason: string;
             original_claim: string;
             issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-            reason: string;
             evidence?: string | undefined;
             correction?: string | undefined;
         }, {
             confidence: number;
+            reason: string;
             original_claim: string;
             issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-            reason: string;
             evidence?: string | undefined;
             correction?: string | undefined;
         }>, "many">;
@@ -762,21 +762,21 @@ export declare const CouncilReviewOutput: z.ZodObject<{
             recommendation: z.ZodEnum<["strongly_prefer", "consider", "situational", "informational"]>;
         }, "strip", z.ZodTypeAny, {
             topic: string;
-            current_approach: string;
-            alternative: string;
             tradeoffs: {
                 pros: string[];
                 cons: string[];
             };
+            current_approach: string;
+            alternative: string;
             recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
         }, {
             topic: string;
-            current_approach: string;
-            alternative: string;
             tradeoffs: {
                 pros: string[];
                 cons: string[];
             };
+            current_approach: string;
+            alternative: string;
             recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
         }>, "many">;
         risk_assessment: z.ZodObject<{
@@ -786,29 +786,28 @@ export declare const CouncilReviewOutput: z.ZodObject<{
             top_concerns: z.ZodArray<z.ZodString, "many">;
             mitigations: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
         }, "strip", z.ZodTypeAny, {
-            overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-            score: number;
             summary: string;
+            overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+            score: number;
             top_concerns: string[];
             mitigations?: string[] | undefined;
         }, {
-            overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-            score: number;
             summary: string;
+            overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+            score: number;
             top_concerns: string[];
             mitigations?: string[] | undefined;
         }>;
         files_examined: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
         execution_notes: z.ZodOptional<z.ZodString>;
     }, "strip", z.ZodTypeAny, {
-        reviewer: string;
         findings: {
-            id: string;
-            category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-            severity: "critical" | "high" | "medium" | "low" | "info";
-            confidence: number;
+            severity: "info" | "high" | "critical" | "medium" | "low";
             title: string;
             description: string;
+            category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+            confidence: number;
+            id: string;
             location?: {
                 file: string;
                 line_start?: number | undefined;
@@ -822,6 +821,17 @@ export declare const CouncilReviewOutput: z.ZodObject<{
             owasp_category?: string | undefined;
             tags?: string[] | undefined;
         }[];
+        alternatives: {
+            topic: string;
+            tradeoffs: {
+                pros: string[];
+                cons: string[];
+            };
+            current_approach: string;
+            alternative: string;
+            recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
+        }[];
+        reviewer: string;
         agreements: {
             confidence: number;
             original_claim: string;
@@ -831,26 +841,16 @@ export declare const CouncilReviewOutput: z.ZodObject<{
         }[];
         disagreements: {
             confidence: number;
+            reason: string;
             original_claim: string;
             issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-            reason: string;
             evidence?: string | undefined;
             correction?: string | undefined;
         }[];
-        alternatives: {
-            topic: string;
-            current_approach: string;
-            alternative: string;
-            tradeoffs: {
-                pros: string[];
-                cons: string[];
-            };
-            recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
-        }[];
         risk_assessment: {
-            overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-            score: number;
             summary: string;
+            overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+            score: number;
             top_concerns: string[];
             mitigations?: string[] | undefined;
         };
@@ -858,14 +858,13 @@ export declare const CouncilReviewOutput: z.ZodObject<{
         files_examined?: string[] | undefined;
         execution_notes?: string | undefined;
     }, {
-        reviewer: string;
         findings: {
-            id: string;
-            category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-            severity: "critical" | "high" | "medium" | "low" | "info";
-            confidence: number;
+            severity: "info" | "high" | "critical" | "medium" | "low";
             title: string;
             description: string;
+            category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+            confidence: number;
+            id: string;
             location?: {
                 file: string;
                 line_start?: number | undefined;
@@ -879,6 +878,17 @@ export declare const CouncilReviewOutput: z.ZodObject<{
             owasp_category?: string | undefined;
             tags?: string[] | undefined;
         }[];
+        alternatives: {
+            topic: string;
+            tradeoffs: {
+                pros: string[];
+                cons: string[];
+            };
+            current_approach: string;
+            alternative: string;
+            recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
+        }[];
+        reviewer: string;
         agreements: {
             confidence: number;
             original_claim: string;
@@ -888,26 +898,16 @@ export declare const CouncilReviewOutput: z.ZodObject<{
         }[];
         disagreements: {
             confidence: number;
+            reason: string;
             original_claim: string;
             issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-            reason: string;
             evidence?: string | undefined;
             correction?: string | undefined;
         }[];
-        alternatives: {
-            topic: string;
-            current_approach: string;
-            alternative: string;
-            tradeoffs: {
-                pros: string[];
-                cons: string[];
-            };
-            recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
-        }[];
         risk_assessment: {
-            overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-            score: number;
             summary: string;
+            overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+            score: number;
             top_concerns: string[];
             mitigations?: string[] | undefined;
         };
@@ -951,12 +951,12 @@ export declare const CouncilReviewOutput: z.ZodObject<{
         owasp_category: z.ZodOptional<z.ZodString>;
         tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     }, "strip", z.ZodTypeAny, {
-        id: string;
-        category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-        severity: "critical" | "high" | "medium" | "low" | "info";
-        confidence: number;
+        severity: "info" | "high" | "critical" | "medium" | "low";
         title: string;
         description: string;
+        category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+        confidence: number;
+        id: string;
         consensus_score: number;
         agreement_count: number;
         sources: string[];
@@ -974,12 +974,12 @@ export declare const CouncilReviewOutput: z.ZodObject<{
         tags?: string[] | undefined;
         peer_validation?: "validated" | "mixed" | "disputed" | "unreviewed" | undefined;
     }, {
-        id: string;
-        category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-        severity: "critical" | "high" | "medium" | "low" | "info";
-        confidence: number;
+        severity: "info" | "high" | "critical" | "medium" | "low";
         title: string;
         description: string;
+        category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+        confidence: number;
+        id: string;
         consensus_score: number;
         agreement_count: number;
         sources: string[];
@@ -1019,15 +1019,15 @@ export declare const CouncilReviewOutput: z.ZodObject<{
         top_concerns: z.ZodArray<z.ZodString, "many">;
         mitigations: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     }, "strip", z.ZodTypeAny, {
-        overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-        score: number;
         summary: string;
+        overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+        score: number;
         top_concerns: string[];
         mitigations?: string[] | undefined;
     }, {
-        overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-        score: number;
         summary: string;
+        overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+        score: number;
         top_concerns: string[];
         mitigations?: string[] | undefined;
     }>;
@@ -1036,14 +1036,13 @@ export declare const CouncilReviewOutput: z.ZodObject<{
     synthesis_notes: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     individual_reviews: Record<string, {
-        reviewer: string;
         findings: {
-            id: string;
-            category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-            severity: "critical" | "high" | "medium" | "low" | "info";
-            confidence: number;
+            severity: "info" | "high" | "critical" | "medium" | "low";
             title: string;
             description: string;
+            category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+            confidence: number;
+            id: string;
             location?: {
                 file: string;
                 line_start?: number | undefined;
@@ -1057,6 +1056,17 @@ export declare const CouncilReviewOutput: z.ZodObject<{
             owasp_category?: string | undefined;
             tags?: string[] | undefined;
         }[];
+        alternatives: {
+            topic: string;
+            tradeoffs: {
+                pros: string[];
+                cons: string[];
+            };
+            current_approach: string;
+            alternative: string;
+            recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
+        }[];
+        reviewer: string;
         agreements: {
             confidence: number;
             original_claim: string;
@@ -1066,26 +1076,16 @@ export declare const CouncilReviewOutput: z.ZodObject<{
         }[];
         disagreements: {
             confidence: number;
+            reason: string;
             original_claim: string;
             issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-            reason: string;
             evidence?: string | undefined;
             correction?: string | undefined;
         }[];
-        alternatives: {
-            topic: string;
-            current_approach: string;
-            alternative: string;
-            tradeoffs: {
-                pros: string[];
-                cons: string[];
-            };
-            recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
-        }[];
         risk_assessment: {
-            overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-            score: number;
             summary: string;
+            overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+            score: number;
             top_concerns: string[];
             mitigations?: string[] | undefined;
         };
@@ -1094,12 +1094,12 @@ export declare const CouncilReviewOutput: z.ZodObject<{
         execution_notes?: string | undefined;
     }>;
     consensus_findings: {
-        id: string;
-        category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-        severity: "critical" | "high" | "medium" | "low" | "info";
-        confidence: number;
+        severity: "info" | "high" | "critical" | "medium" | "low";
         title: string;
         description: string;
+        category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+        confidence: number;
+        id: string;
         consensus_score: number;
         agreement_count: number;
         sources: string[];
@@ -1125,9 +1125,9 @@ export declare const CouncilReviewOutput: z.ZodObject<{
     }[];
     unique_insights: Record<string, string[]>;
     combined_risk: {
-        overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-        score: number;
         summary: string;
+        overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+        score: number;
         top_concerns: string[];
         mitigations?: string[] | undefined;
     };
@@ -1136,14 +1136,13 @@ export declare const CouncilReviewOutput: z.ZodObject<{
     synthesis_notes?: string | undefined;
 }, {
     individual_reviews: Record<string, {
-        reviewer: string;
         findings: {
-            id: string;
-            category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-            severity: "critical" | "high" | "medium" | "low" | "info";
-            confidence: number;
+            severity: "info" | "high" | "critical" | "medium" | "low";
             title: string;
             description: string;
+            category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+            confidence: number;
+            id: string;
             location?: {
                 file: string;
                 line_start?: number | undefined;
@@ -1157,6 +1156,17 @@ export declare const CouncilReviewOutput: z.ZodObject<{
             owasp_category?: string | undefined;
             tags?: string[] | undefined;
         }[];
+        alternatives: {
+            topic: string;
+            tradeoffs: {
+                pros: string[];
+                cons: string[];
+            };
+            current_approach: string;
+            alternative: string;
+            recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
+        }[];
+        reviewer: string;
         agreements: {
             confidence: number;
             original_claim: string;
@@ -1166,26 +1176,16 @@ export declare const CouncilReviewOutput: z.ZodObject<{
         }[];
         disagreements: {
             confidence: number;
+            reason: string;
             original_claim: string;
             issue: "incorrect" | "misleading" | "incomplete" | "outdated" | "hallucinated";
-            reason: string;
             evidence?: string | undefined;
             correction?: string | undefined;
         }[];
-        alternatives: {
-            topic: string;
-            current_approach: string;
-            alternative: string;
-            tradeoffs: {
-                pros: string[];
-                cons: string[];
-            };
-            recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
-        }[];
         risk_assessment: {
-            overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-            score: number;
             summary: string;
+            overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+            score: number;
             top_concerns: string[];
             mitigations?: string[] | undefined;
         };
@@ -1194,12 +1194,12 @@ export declare const CouncilReviewOutput: z.ZodObject<{
         execution_notes?: string | undefined;
     }>;
     consensus_findings: {
-        id: string;
-        category: "security" | "performance" | "architecture" | "correctness" | "maintainability" | "scalability" | "testing" | "documentation" | "best-practice" | "other";
-        severity: "critical" | "high" | "medium" | "low" | "info";
-        confidence: number;
+        severity: "info" | "high" | "critical" | "medium" | "low";
         title: string;
         description: string;
+        category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
+        confidence: number;
+        id: string;
         consensus_score: number;
         agreement_count: number;
         sources: string[];
@@ -1225,9 +1225,9 @@ export declare const CouncilReviewOutput: z.ZodObject<{
     }[];
     unique_insights: Record<string, string[]>;
     combined_risk: {
-        overall_level: "critical" | "high" | "medium" | "low" | "minimal";
-        score: number;
         summary: string;
+        overall_level: "high" | "critical" | "medium" | "low" | "minimal";
+        score: number;
         top_concerns: string[];
         mitigations?: string[] | undefined;
     };

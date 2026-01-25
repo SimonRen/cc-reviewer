@@ -1,35 +1,21 @@
 /**
- * MCP Tool Implementations for Council Review
+ * MCP Tool Implementations
  *
- * Provides three levels of review:
+ * Provides two levels of review:
  * 1. Single model review (codex_feedback, gemini_feedback)
  * 2. Multi-model parallel review (multi_feedback)
- * 3. Council review with consensus (council_feedback) - NEW
  */
 
 import { z } from 'zod';
 import { FocusArea, OutputType } from '../types.js';
 import {
-  ReviewerAdapter,
   ReviewRequest,
   ReviewResult,
   getAdapter,
   getAvailableAdapters,
-  selectBestAdapter,
-  EXPERT_ROLES,
   selectExpertRole,
 } from '../adapters/index.js';
-import {
-  ReviewOutput,
-  CouncilReviewOutput,
-} from '../schema.js';
-import {
-  synthesizeCouncilReview,
-  formatCouncilReview,
-  formatConsensusFindings,
-  DEFAULT_CONSENSUS_CONFIG,
-  ConsensusConfig,
-} from '../consensus.js';
+import { ReviewOutput } from '../schema.js';
 
 // =============================================================================
 // INPUT SCHEMAS
@@ -49,15 +35,6 @@ export const FeedbackInputSchema = z.object({
 });
 
 export type FeedbackInput = z.infer<typeof FeedbackInputSchema>;
-
-// Council-specific input with consensus options
-export const CouncilInputSchema = FeedbackInputSchema.extend({
-  minConsensusThreshold: z.number().min(0).max(1).optional().describe('Minimum consensus score to include findings (default: 0.3)'),
-  includeSingleSource: z.boolean().optional().describe('Include findings from only one model (default: true)'),
-  // Note: Peer review was removed as it was never implemented. May be added in future.
-});
-
-export type CouncilInput = z.infer<typeof CouncilInputSchema>;
 
 // =============================================================================
 // HELPER FUNCTIONS
@@ -349,82 +326,6 @@ Install at least one:
 }
 
 // =============================================================================
-// COUNCIL REVIEW HANDLER (NEW - Full Consensus)
-// =============================================================================
-
-export async function handleCouncilFeedback(input: CouncilInput): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
-  const request = toReviewRequest(input);
-
-  // Get all available adapters
-  const availableAdapters = await getAvailableAdapters();
-
-  if (availableAdapters.length === 0) {
-    return {
-      content: [{
-        type: 'text',
-        text: `❌ No AI CLIs found.
-
-Install at least one:
-  - Codex: npm install -g @openai/codex
-  - Gemini: npm install -g @google/gemini-cli`
-      }]
-    };
-  }
-
-  // Configure consensus
-  const consensusConfig: ConsensusConfig = {
-    ...DEFAULT_CONSENSUS_CONFIG,
-    minConsensusThreshold: input.minConsensusThreshold ?? DEFAULT_CONSENSUS_CONFIG.minConsensusThreshold,
-    includeSingleSourceFindings: input.includeSingleSource ?? DEFAULT_CONSENSUS_CONFIG.includeSingleSourceFindings,
-  };
-
-  // Run all available adapters in parallel
-  const promises = availableAdapters.map(async (adapter) => {
-    const adapterRequest = { ...request };
-    adapterRequest.expertRole = selectExpertRole(input.focusAreas as FocusArea[] | undefined);
-    const result = await adapter.runReview(adapterRequest);
-    return { adapter, result };
-  });
-
-  const results = await Promise.all(promises);
-
-  // Collect results
-  const reviews = new Map<string, ReviewOutput>();
-  const failed: string[] = [];
-
-  for (const { adapter, result } of results) {
-    if (result.success) {
-      reviews.set(adapter.id, result.output);
-    } else {
-      failed.push(adapter.id);
-    }
-  }
-
-  if (reviews.size === 0) {
-    return {
-      content: [{
-        type: 'text',
-        text: '❌ All reviewers failed. Cannot generate council review.'
-      }]
-    };
-  }
-
-  // Synthesize council review
-  const councilReview = synthesizeCouncilReview(reviews, consensusConfig);
-  councilReview.models_failed = failed.length > 0 ? failed : undefined;
-
-  // Format the response
-  const formattedReview = formatCouncilReview(councilReview);
-
-  return {
-    content: [{
-      type: 'text',
-      text: formattedReview
-    }]
-  };
-}
-
-// =============================================================================
 // TOOL DEFINITIONS
 // =============================================================================
 
@@ -554,52 +455,4 @@ export const TOOL_DEFINITIONS = {
       required: ['workingDir', 'ccOutput', 'outputType']
     }
   },
-  council_feedback: {
-    name: 'council_feedback',
-    description: "ONLY use when user explicitly requests council review or consensus-based feedback. Get external second-opinions from multiple CLIs with automatic consensus calculation. Runs Codex and Gemini in parallel, detects agreements/conflicts, and synthesizes findings with confidence scores. DO NOT use for general 'review' requests.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        workingDir: {
-          type: 'string',
-          description: 'Working directory for the CLI to operate in'
-        },
-        ccOutput: {
-          type: 'string',
-          description: "Claude Code's output to review (findings, plan, analysis)"
-        },
-        outputType: {
-          type: 'string',
-          enum: ['plan', 'findings', 'analysis', 'proposal'],
-          description: 'Type of output being reviewed'
-        },
-        analyzedFiles: {
-          type: 'array',
-          items: { type: 'string' },
-          description: 'File paths that CC analyzed'
-        },
-        focusAreas: {
-          type: 'array',
-          items: {
-            type: 'string',
-            enum: ['security', 'performance', 'architecture', 'correctness', 'maintainability', 'scalability', 'testing', 'documentation']
-          },
-          description: 'Areas to focus the review on'
-        },
-        customPrompt: {
-          type: 'string',
-          description: 'Custom instructions for the reviewer'
-        },
-        minConsensusThreshold: {
-          type: 'number',
-          description: 'Minimum consensus score (0-1) to include findings (default: 0.3)'
-        },
-        includeSingleSource: {
-          type: 'boolean',
-          description: 'Include findings from only one model (default: true)'
-        }
-      },
-      required: ['workingDir', 'ccOutput', 'outputType']
-    }
-  }
 };

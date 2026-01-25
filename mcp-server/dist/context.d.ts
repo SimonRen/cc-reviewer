@@ -22,12 +22,12 @@ export declare const FileChangeSchema: z.ZodObject<{
         lineStart: z.ZodOptional<z.ZodNumber>;
         lineEnd: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
-        type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+        type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
         name: string;
         lineStart?: number | undefined;
         lineEnd?: number | undefined;
     }, {
-        type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+        type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
         name: string;
         lineStart?: number | undefined;
         lineEnd?: number | undefined;
@@ -44,7 +44,7 @@ export declare const FileChangeSchema: z.ZodObject<{
     linesRemoved?: number | undefined;
     content?: string | undefined;
     changedSymbols?: {
-        type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+        type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
         name: string;
         lineStart?: number | undefined;
         lineEnd?: number | undefined;
@@ -61,7 +61,7 @@ export declare const FileChangeSchema: z.ZodObject<{
     linesRemoved?: number | undefined;
     content?: string | undefined;
     changedSymbols?: {
-        type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+        type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
         name: string;
         lineStart?: number | undefined;
         lineEnd?: number | undefined;
@@ -216,13 +216,13 @@ export declare const ExecutionContextSchema: z.ZodObject<{
         }, "strip", z.ZodTypeAny, {
             message: string;
             file: string;
-            severity: "info" | "error" | "warning";
+            severity: "error" | "warning" | "info";
             line?: number | undefined;
             rule?: string | undefined;
         }, {
             message: string;
             file: string;
-            severity: "info" | "error" | "warning";
+            severity: "error" | "warning" | "info";
             line?: number | undefined;
             rule?: string | undefined;
         }>, "many">>;
@@ -231,7 +231,7 @@ export declare const ExecutionContextSchema: z.ZodObject<{
         issues?: {
             message: string;
             file: string;
-            severity: "info" | "error" | "warning";
+            severity: "error" | "warning" | "info";
             line?: number | undefined;
             rule?: string | undefined;
         }[] | undefined;
@@ -240,7 +240,7 @@ export declare const ExecutionContextSchema: z.ZodObject<{
         issues?: {
             message: string;
             file: string;
-            severity: "info" | "error" | "warning";
+            severity: "error" | "warning" | "info";
             line?: number | undefined;
             rule?: string | undefined;
         }[] | undefined;
@@ -285,7 +285,7 @@ export declare const ExecutionContextSchema: z.ZodObject<{
         issues?: {
             message: string;
             file: string;
-            severity: "info" | "error" | "warning";
+            severity: "error" | "warning" | "info";
             line?: number | undefined;
             rule?: string | undefined;
         }[] | undefined;
@@ -330,7 +330,7 @@ export declare const ExecutionContextSchema: z.ZodObject<{
         issues?: {
             message: string;
             file: string;
-            severity: "info" | "error" | "warning";
+            severity: "error" | "warning" | "info";
             line?: number | undefined;
             rule?: string | undefined;
         }[] | undefined;
@@ -408,16 +408,16 @@ export declare const CCAnalysisSchema: z.ZodObject<{
         confidence: z.ZodOptional<z.ZodNumber>;
         addressed: z.ZodOptional<z.ZodBoolean>;
     }, "strip", z.ZodTypeAny, {
-        category: string;
         description: string;
-        confidence?: number | undefined;
+        category: string;
         location?: string | undefined;
+        confidence?: number | undefined;
         addressed?: boolean | undefined;
     }, {
-        category: string;
         description: string;
-        confidence?: number | undefined;
+        category: string;
         location?: string | undefined;
+        confidence?: number | undefined;
         addressed?: boolean | undefined;
     }>, "many">>;
     uncertainties: z.ZodOptional<z.ZodArray<z.ZodObject<{
@@ -449,17 +449,17 @@ export declare const CCAnalysisSchema: z.ZodObject<{
     }>, "many">>;
     confidence: z.ZodOptional<z.ZodNumber>;
 }, "strip", z.ZodTypeAny, {
-    summary: string;
     originalRequest: string;
+    summary: string;
+    taskType?: "other" | "feature" | "bugfix" | "refactor" | "security-fix" | "performance" | "review" | undefined;
     confidence?: number | undefined;
     findings?: {
-        category: string;
         description: string;
-        confidence?: number | undefined;
+        category: string;
         location?: string | undefined;
+        confidence?: number | undefined;
         addressed?: boolean | undefined;
     }[] | undefined;
-    taskType?: "performance" | "other" | "review" | "feature" | "bugfix" | "refactor" | "security-fix" | undefined;
     uncertainties?: {
         topic: string;
         question: string;
@@ -472,17 +472,17 @@ export declare const CCAnalysisSchema: z.ZodObject<{
         alternatives?: string[] | undefined;
     }[] | undefined;
 }, {
-    summary: string;
     originalRequest: string;
+    summary: string;
+    taskType?: "other" | "feature" | "bugfix" | "refactor" | "security-fix" | "performance" | "review" | undefined;
     confidence?: number | undefined;
     findings?: {
-        category: string;
         description: string;
-        confidence?: number | undefined;
+        category: string;
         location?: string | undefined;
+        confidence?: number | undefined;
         addressed?: boolean | undefined;
     }[] | undefined;
-    taskType?: "performance" | "other" | "review" | "feature" | "bugfix" | "refactor" | "security-fix" | undefined;
     uncertainties?: {
         topic: string;
         question: string;
@@ -613,12 +613,12 @@ export declare const ReviewContextSchema: z.ZodObject<{
                 lineStart: z.ZodOptional<z.ZodNumber>;
                 lineEnd: z.ZodOptional<z.ZodNumber>;
             }, "strip", z.ZodTypeAny, {
-                type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+                type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
                 name: string;
                 lineStart?: number | undefined;
                 lineEnd?: number | undefined;
             }, {
-                type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+                type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
                 name: string;
                 lineStart?: number | undefined;
                 lineEnd?: number | undefined;
@@ -635,7 +635,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             linesRemoved?: number | undefined;
             content?: string | undefined;
             changedSymbols?: {
-                type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+                type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
                 name: string;
                 lineStart?: number | undefined;
                 lineEnd?: number | undefined;
@@ -652,7 +652,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             linesRemoved?: number | undefined;
             content?: string | undefined;
             changedSymbols?: {
-                type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+                type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
                 name: string;
                 lineStart?: number | undefined;
                 lineEnd?: number | undefined;
@@ -674,7 +674,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             linesRemoved?: number | undefined;
             content?: string | undefined;
             changedSymbols?: {
-                type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+                type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
                 name: string;
                 lineStart?: number | undefined;
                 lineEnd?: number | undefined;
@@ -696,7 +696,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             linesRemoved?: number | undefined;
             content?: string | undefined;
             changedSymbols?: {
-                type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+                type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
                 name: string;
                 lineStart?: number | undefined;
                 lineEnd?: number | undefined;
@@ -720,16 +720,16 @@ export declare const ReviewContextSchema: z.ZodObject<{
             confidence: z.ZodOptional<z.ZodNumber>;
             addressed: z.ZodOptional<z.ZodBoolean>;
         }, "strip", z.ZodTypeAny, {
-            category: string;
             description: string;
-            confidence?: number | undefined;
+            category: string;
             location?: string | undefined;
+            confidence?: number | undefined;
             addressed?: boolean | undefined;
         }, {
-            category: string;
             description: string;
-            confidence?: number | undefined;
+            category: string;
             location?: string | undefined;
+            confidence?: number | undefined;
             addressed?: boolean | undefined;
         }>, "many">>;
         uncertainties: z.ZodOptional<z.ZodArray<z.ZodObject<{
@@ -761,17 +761,17 @@ export declare const ReviewContextSchema: z.ZodObject<{
         }>, "many">>;
         confidence: z.ZodOptional<z.ZodNumber>;
     }, "strip", z.ZodTypeAny, {
-        summary: string;
         originalRequest: string;
+        summary: string;
+        taskType?: "other" | "feature" | "bugfix" | "refactor" | "security-fix" | "performance" | "review" | undefined;
         confidence?: number | undefined;
         findings?: {
-            category: string;
             description: string;
-            confidence?: number | undefined;
+            category: string;
             location?: string | undefined;
+            confidence?: number | undefined;
             addressed?: boolean | undefined;
         }[] | undefined;
-        taskType?: "performance" | "other" | "review" | "feature" | "bugfix" | "refactor" | "security-fix" | undefined;
         uncertainties?: {
             topic: string;
             question: string;
@@ -784,17 +784,17 @@ export declare const ReviewContextSchema: z.ZodObject<{
             alternatives?: string[] | undefined;
         }[] | undefined;
     }, {
-        summary: string;
         originalRequest: string;
+        summary: string;
+        taskType?: "other" | "feature" | "bugfix" | "refactor" | "security-fix" | "performance" | "review" | undefined;
         confidence?: number | undefined;
         findings?: {
-            category: string;
             description: string;
-            confidence?: number | undefined;
+            category: string;
             location?: string | undefined;
+            confidence?: number | undefined;
             addressed?: boolean | undefined;
         }[] | undefined;
-        taskType?: "performance" | "other" | "review" | "feature" | "bugfix" | "refactor" | "security-fix" | undefined;
         uncertainties?: {
             topic: string;
             question: string;
@@ -949,13 +949,13 @@ export declare const ReviewContextSchema: z.ZodObject<{
             }, "strip", z.ZodTypeAny, {
                 message: string;
                 file: string;
-                severity: "info" | "error" | "warning";
+                severity: "error" | "warning" | "info";
                 line?: number | undefined;
                 rule?: string | undefined;
             }, {
                 message: string;
                 file: string;
-                severity: "info" | "error" | "warning";
+                severity: "error" | "warning" | "info";
                 line?: number | undefined;
                 rule?: string | undefined;
             }>, "many">>;
@@ -964,7 +964,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             issues?: {
                 message: string;
                 file: string;
-                severity: "info" | "error" | "warning";
+                severity: "error" | "warning" | "info";
                 line?: number | undefined;
                 rule?: string | undefined;
             }[] | undefined;
@@ -973,7 +973,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             issues?: {
                 message: string;
                 file: string;
-                severity: "info" | "error" | "warning";
+                severity: "error" | "warning" | "info";
                 line?: number | undefined;
                 rule?: string | undefined;
             }[] | undefined;
@@ -1018,7 +1018,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             issues?: {
                 message: string;
                 file: string;
-                severity: "info" | "error" | "warning";
+                severity: "error" | "warning" | "info";
                 line?: number | undefined;
                 rule?: string | undefined;
             }[] | undefined;
@@ -1063,7 +1063,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             issues?: {
                 message: string;
                 file: string;
-                severity: "info" | "error" | "warning";
+                severity: "error" | "warning" | "info";
                 line?: number | undefined;
                 rule?: string | undefined;
             }[] | undefined;
@@ -1236,7 +1236,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             linesRemoved?: number | undefined;
             content?: string | undefined;
             changedSymbols?: {
-                type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+                type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
                 name: string;
                 lineStart?: number | undefined;
                 lineEnd?: number | undefined;
@@ -1250,17 +1250,17 @@ export declare const ReviewContextSchema: z.ZodObject<{
         impactedModules?: string[] | undefined;
     };
     analysis: {
-        summary: string;
         originalRequest: string;
+        summary: string;
+        taskType?: "other" | "feature" | "bugfix" | "refactor" | "security-fix" | "performance" | "review" | undefined;
         confidence?: number | undefined;
         findings?: {
-            category: string;
             description: string;
-            confidence?: number | undefined;
+            category: string;
             location?: string | undefined;
+            confidence?: number | undefined;
             addressed?: boolean | undefined;
         }[] | undefined;
-        taskType?: "performance" | "other" | "review" | "feature" | "bugfix" | "refactor" | "security-fix" | undefined;
         uncertainties?: {
             topic: string;
             question: string;
@@ -1314,7 +1314,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             issues?: {
                 message: string;
                 file: string;
-                severity: "info" | "error" | "warning";
+                severity: "error" | "warning" | "info";
                 line?: number | undefined;
                 rule?: string | undefined;
             }[] | undefined;
@@ -1371,7 +1371,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             linesRemoved?: number | undefined;
             content?: string | undefined;
             changedSymbols?: {
-                type: "function" | "type" | "other" | "class" | "variable" | "import" | "export";
+                type: "function" | "type" | "class" | "variable" | "import" | "export" | "other";
                 name: string;
                 lineStart?: number | undefined;
                 lineEnd?: number | undefined;
@@ -1385,17 +1385,17 @@ export declare const ReviewContextSchema: z.ZodObject<{
         impactedModules?: string[] | undefined;
     };
     analysis: {
-        summary: string;
         originalRequest: string;
+        summary: string;
+        taskType?: "other" | "feature" | "bugfix" | "refactor" | "security-fix" | "performance" | "review" | undefined;
         confidence?: number | undefined;
         findings?: {
-            category: string;
             description: string;
-            confidence?: number | undefined;
+            category: string;
             location?: string | undefined;
+            confidence?: number | undefined;
             addressed?: boolean | undefined;
         }[] | undefined;
-        taskType?: "performance" | "other" | "review" | "feature" | "bugfix" | "refactor" | "security-fix" | undefined;
         uncertainties?: {
             topic: string;
             question: string;
@@ -1449,7 +1449,7 @@ export declare const ReviewContextSchema: z.ZodObject<{
             issues?: {
                 message: string;
                 file: string;
-                severity: "info" | "error" | "warning";
+                severity: "error" | "warning" | "info";
                 line?: number | undefined;
                 rule?: string | undefined;
             }[] | undefined;
