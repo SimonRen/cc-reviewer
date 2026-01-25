@@ -1,5 +1,5 @@
 /**
- * Prompt Builder for Council Review
+ * Prompt Builder for AI Review
  *
  * Builds structured prompts that request JSON output from external CLIs.
  * Supports expert roles for specialized reviews.

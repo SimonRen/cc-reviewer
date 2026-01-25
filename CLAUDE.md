@@ -52,7 +52,6 @@ This is an MCP (Model Context Protocol) server that provides AI code review tool
 - `pipeline.ts` - Finding verification pipeline. `FileCache` for performance. Path traversal protection with `resolve()` + `normalize()`. `verifyFinding()` adjusts confidence based on evidence matching
 - `schema.ts` - Zod schemas for structured output (ReviewFinding, Agreement, Disagreement, etc.). `parseReviewOutput()` extracts JSON from CLI responses
 - `handoff.ts` - Minimal handoff protocol: pass only what CC uniquely knows (uncertainties, decisions, questions), let reviewer discover code via filesystem
-- `consensus.ts` - Multi-model consensus building. `findingSimilarity()` clusters similar findings across models. `synthesizeCouncilReview()` produces final output
 - `context.ts` - Review context with verification data
 
 **Design Principles:**

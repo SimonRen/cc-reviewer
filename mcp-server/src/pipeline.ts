@@ -9,7 +9,7 @@
  * 5. Plan - Generate actionable next steps
  */
 
-import { ReviewOutput, ReviewFinding, ConsensusFinding } from './schema.js';
+import { ReviewOutput, ReviewFinding } from './schema.js';
 import { ReviewContext, VerificationData, verifyFileLineReference } from './context.js';
 import { existsSync, readFileSync } from 'fs';
 import { join, resolve, normalize } from 'path';

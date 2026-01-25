@@ -1,5 +1,5 @@
 /**
- * Structured Output Schemas for Council Review
+ * Structured Output Schemas for AI Review
  *
  * Uses Zod for strict validation of reviewer output.
  * This replaces the fragile regex-based markdown validation.
@@ -17,7 +17,7 @@ export type SeverityLevel = z.infer<typeof SeverityLevel>;
 export const ConfidenceLevel = z.enum(['verified', 'high', 'medium', 'low', 'uncertain']);
 export type ConfidenceLevel = z.infer<typeof ConfidenceLevel>;
 
-// Numeric confidence score (0-1) for consensus calculations
+// Numeric confidence score (0-1)
 export const ConfidenceScore = z.number().min(0).max(1);
 export type ConfidenceScore = z.infer<typeof ConfidenceScore>;
 
@@ -167,53 +167,6 @@ export const PeerReview = z.object({
   summary: z.string().optional(),
 });
 export type PeerReview = z.infer<typeof PeerReview>;
-
-// =============================================================================
-// CONSENSUS FINDING (After multi-model synthesis)
-// =============================================================================
-
-export const ConsensusFinding = z.object({
-  // Original finding data
-  ...ReviewFinding.shape,
-
-  // Consensus metadata
-  consensus_score: z.number().min(0).max(1).describe('Weighted consensus confidence'),
-  agreement_count: z.number().int().nonnegative().describe('How many models agreed'),
-  sources: z.array(z.string()).describe('Which reviewers found this'),
-  peer_validation: z.enum(['validated', 'mixed', 'disputed', 'unreviewed']).optional(),
-});
-export type ConsensusFinding = z.infer<typeof ConsensusFinding>;
-
-// =============================================================================
-// COUNCIL REVIEW OUTPUT (Multi-model synthesis)
-// =============================================================================
-
-export const CouncilReviewOutput = z.object({
-  // Individual reviews (for transparency)
-  individual_reviews: z.record(z.string(), ReviewOutput).describe('Raw outputs per model'),
-
-  // Synthesized results
-  consensus_findings: z.array(ConsensusFinding).describe('Findings with consensus scores'),
-
-  // Cross-model analysis
-  unanimous_agreements: z.array(z.string()).describe('Things all models agreed on'),
-  conflicts: z.array(z.object({
-    topic: z.string(),
-    positions: z.record(z.string(), z.string()),
-    recommendation: z.string().optional(),
-  })).describe('Disagreements between models'),
-
-  unique_insights: z.record(z.string(), z.array(z.string())).describe('Unique findings per model'),
-
-  // Overall assessment
-  combined_risk: RiskAssessment,
-
-  // Metadata
-  models_participated: z.array(z.string()),
-  models_failed: z.array(z.string()).optional(),
-  synthesis_notes: z.string().optional(),
-});
-export type CouncilReviewOutput = z.infer<typeof CouncilReviewOutput>;
 
 // =============================================================================
 // JSON SCHEMA GENERATION FOR PROMPTS

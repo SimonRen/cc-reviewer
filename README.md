@@ -55,7 +55,6 @@ These tools provide **external second-opinion reviews** from Codex and Gemini CL
 - `/codex` or "review with codex" - Get external Codex review
 - `/gemini` or "review with gemini" - Get external Gemini review
 - `/multi` - Get parallel reviews from both CLIs
-- Council review - Get consensus-based feedback from multiple models
 
 **For regular reviews:** Just say "review" and Claude Code will use its native capabilities. These external tools are only invoked when explicitly requested.
 

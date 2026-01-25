@@ -24,11 +24,6 @@
       "name": "multi",
       "description": "Get parallel review from both Codex and Gemini",
       "file": "commands/multi.md"
-    },
-    {
-      "name": "council",
-      "description": "Multi-model consensus review with verification",
-      "file": "commands/council.md"
     }
   ]
 }
