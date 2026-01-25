@@ -10,5 +10,9 @@
  * - Multi-model parallel review (multi_review)
  * - Structured JSON output with confidence scores
  * - Expert role specialization per focus area
+ *
+ * Usage:
+ * - npx cc-reviewer          # Run MCP server (normal usage)
+ * - npx cc-reviewer --setup  # Install slash commands only
  */
 import './adapters/index.js';

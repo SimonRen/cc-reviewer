@@ -10,6 +10,10 @@
  * - Multi-model parallel review (multi_review)
  * - Structured JSON output with confidence scores
  * - Expert role specialization per focus area
+ *
+ * Usage:
+ * - npx cc-reviewer          # Run MCP server (normal usage)
+ * - npx cc-reviewer --setup  # Install slash commands only
  */
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
@@ -28,6 +32,18 @@ import {
 } from './tools/feedback.js';
 import { logCliStatus } from './cli/check.js';
 import { installCommands } from './commands.js';
+
+// Handle --setup flag: install commands and exit
+if (process.argv.includes('--setup') || process.argv.includes('--commands')) {
+  const result = installCommands();
+  if (result.success) {
+    console.log(`✓ Installed ${result.installed.length} slash commands: ${result.installed.join(', ')}`);
+    process.exit(0);
+  } else {
+    console.error(`✗ Failed to install commands: ${result.error}`);
+    process.exit(1);
+  }
+}
 
 // Import adapters to register them
 import './adapters/index.js';

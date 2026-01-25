@@ -13,6 +13,11 @@ claude mcp add -s user cc-reviewer -- npx -y cc-reviewer
 
 The MCP tools and slash commands (`/codex`, `/gemini`, `/multi`) are automatically installed.
 
+**Manual command install** (if needed):
+```bash
+npx cc-reviewer --setup
+```
+
 Verify with:
 ```bash
 claude mcp list
