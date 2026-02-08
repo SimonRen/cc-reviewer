@@ -119,7 +119,7 @@ export const RiskAssessment = z.object({
   overall_level: z.enum(['critical', 'high', 'medium', 'low', 'minimal']),
   score: z.number().min(0).max(100).describe('Numeric risk score 0-100'),
   summary: z.string().max(300).describe('Brief risk summary'),
-  top_concerns: z.array(z.string()).max(5).describe('Top risk factors'),
+  top_concerns: z.array(z.string()).describe('Top risk factors'),
   mitigations: z.array(z.string()).optional().describe('Suggested mitigations'),
 });
 export type RiskAssessment = z.infer<typeof RiskAssessment>;
@@ -262,7 +262,7 @@ export function getReviewOutputJsonSchema(): object {
           overall_level: { type: 'string', enum: ['critical', 'high', 'medium', 'low', 'minimal'] },
           score: { type: 'number', minimum: 0, maximum: 100 },
           summary: { type: 'string', maxLength: 300 },
-          top_concerns: { type: 'array', items: { type: 'string' }, maxItems: 5 }
+          top_concerns: { type: 'array', items: { type: 'string' } }
         }
       }
     }
