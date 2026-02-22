@@ -23,17 +23,18 @@ npm test -- --filter="schema"
 
 ## Publishing
 
-Tag-based publish via npm Trusted Publishing (OIDC, no tokens needed).
-CI triggers on `v*` tags and validates the tag matches `package.json`.
+Release-based publish via npm Trusted Publishing (OIDC, no tokens needed).
+CI triggers on GitHub Release, validates the tag matches `package.json`.
 
 ```bash
 # 1. Bump version in package.json
 # 2. Rebuild and test
 cd mcp-server && npm run build && npm test
-# 3. Commit, tag, push
+# 3. Commit, tag, push, release
 git add -A && git commit -m "v1.x.x"
 git tag v1.x.x
 git push && git push --tags
+gh release create v1.x.x --title "v1.x.x" --generate-notes
 ```
 
 ## Architecture
