@@ -11,7 +11,7 @@ claude mcp add -s user cc-reviewer -- npx -y cc-reviewer
 
 **Step 2: Restart Claude Code**
 
-The MCP tools and slash commands (`/codex`, `/gemini`, `/multi`) are automatically installed.
+The MCP tools and slash commands (`/codex`, `/gemini`, `/multi`, `/ask-codex`, `/ask-gemini`, `/ask-multi`) are automatically installed.
 
 **Manual command install** (if needed):
 ```bash
@@ -51,10 +51,15 @@ gemini  # follow auth prompts
 
 These tools provide **external second-opinion reviews** from Codex and Gemini CLIs. They are designed to complement Claude Code's native review capabilities, not replace them.
 
-**When to use:**
+**Review tools** (external second-opinion on your work):
 - `/codex` or "review with codex" - Get external Codex review
 - `/gemini` or "review with gemini" - Get external Gemini review
 - `/multi` - Get parallel reviews from both CLIs
+
+**Ask tools** (get help from a peer engineer):
+- `/ask-codex` - Ask Codex for help (planning, debugging, explaining, fixing)
+- `/ask-gemini` - Ask Gemini for help (architecture, patterns, scalability)
+- `/ask-multi` - Ask both models in parallel
 
 **For regular reviews:** Just say "review" and Claude Code will use its native capabilities. These external tools are only invoked when explicitly requested.
 
@@ -63,14 +68,18 @@ These tools provide **external second-opinion reviews** from Codex and Gemini CL
 These commands are available after restart:
 
 ```bash
+# Review tools
 /codex                    # Review with Codex
 /codex security           # Focus on security
 /codex-xhigh              # Codex with xhigh reasoning effort
-
 /gemini                   # Review with Gemini
 /gemini architecture      # Focus on architecture
-
 /multi                    # Both models in parallel
+
+# Ask tools (peer engineer)
+/ask-codex                # Ask Codex for help
+/ask-gemini               # Ask Gemini for help
+/ask-multi                # Ask both in parallel
 ```
 
 ## How It Works
@@ -99,22 +108,32 @@ CC does work → User: /codex → External CLI reviews → CC synthesizes → Up
 
 ## MCP Tools
 
-The plugin exposes three MCP tools:
+The plugin exposes six MCP tools:
 
 | Tool | Description |
 |------|-------------|
 | `codex_review` | Get Codex review (correctness, edge cases, performance) |
 | `gemini_review` | Get Gemini review (design patterns, scalability, tech debt) |
 | `multi_review` | Parallel review from both models |
+| `ask_codex` | Ask Codex for help (planning, debugging, explaining, fixing) |
+| `ask_gemini` | Ask Gemini for help (architecture, patterns, scalability) |
+| `ask_multi` | Ask both models in parallel |
 
 ## Output Format
 
-External CLIs return structured JSON feedback with:
+**Review tools** return structured JSON feedback with:
 - **Findings**: Issues with severity, confidence, location, and suggestions
 - **Agreements**: Validations of CC's correct assessments
 - **Disagreements**: Challenges to CC's claims with corrections
 - **Alternatives**: Different approaches with tradeoffs
 - **Risk Assessment**: Overall risk level with top concerns
+
+**Ask tools** return structured JSON responses with:
+- **Answer**: Main response text (markdown)
+- **Key Points**: Bullet summary of main points
+- **Suggested Actions**: Recommended actions with priority and rationale
+- **File References**: Files examined with line ranges and relevance
+- **Alternatives**: Alternative approaches considered
 
 ## Development
 
@@ -130,9 +149,17 @@ npm start           # Run server
 
 ## Publishing
 
-Uses npm Trusted Publishing (OIDC, no tokens):
+Tag-based publish via npm Trusted Publishing (OIDC, no tokens needed).
+CI triggers on `v*` tags and validates the tag matches `package.json`.
+
 ```bash
-gh workflow run publish.yml -f version=patch  # or minor/major
+# 1. Bump version in package.json
+# 2. Rebuild and test
+npm run build && npm test
+# 3. Commit, tag, push
+git add -A && git commit -m "v1.x.x"
+git tag v1.x.x
+git push && git push --tags
 ```
 
 ## License

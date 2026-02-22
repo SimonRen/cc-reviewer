@@ -23,12 +23,18 @@ npm test -- --filter="schema"
 
 ## Publishing
 
-Uses npm Trusted Publishing with OIDC (no tokens needed):
-```bash
-gh workflow run publish.yml -f version=patch   # or minor/major/skip
-```
+Tag-based publish via npm Trusted Publishing (OIDC, no tokens needed).
+CI triggers on `v*` tags and validates the tag matches `package.json`.
 
-Or create a GitHub release to auto-publish.
+```bash
+# 1. Bump version in package.json
+# 2. Rebuild and test
+cd mcp-server && npm run build && npm test
+# 3. Commit, tag, push
+git add -A && git commit -m "v1.x.x"
+git tag v1.x.x
+git push && git push --tags
+```
 
 ## Architecture
 
