@@ -1,20 +1,9 @@
 name: Publish to npm
 
 on:
-  release:
-    types: [published]
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version bump type (patch, minor, major) or skip to use current version'
-        required: false
-        default: 'skip'
-        type: choice
-        options:
-          - skip
-          - patch
-          - minor
-          - major
+  push:
+    tags:
+      - 'v*'
 
 jobs:
   publish:
@@ -24,25 +13,27 @@ jobs:
       run:
         working-directory: ./mcp-server
     permissions:
-      contents: write
+      contents: read
       id-token: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Validate tag matches package.json
+        run: |
+          TAG_VERSION="${GITHUB_REF_NAME#v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::Tag version ($TAG_VERSION) does not match package.json ($PKG_VERSION)"
+            exit 1
+          fi
+          echo "Publishing version $TAG_VERSION"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '22.x'
           registry-url: 'https://registry.npmjs.org'
-
-      - name: Upgrade npm
-        run: npm install -g npm@11
-
-      - name: Check versions
-        run: |
-          node --version
-          npm --version
 
       - name: Install dependencies
         run: npm ci
@@ -52,16 +43,6 @@ jobs:
 
       - name: Build
         run: npm run build
-
-      - name: Bump version (if specified)
-        if: inputs.version != 'skip'
-        env:
-          VERSION_TYPE: ${{ inputs.version }}
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          npm version "$VERSION_TYPE" -m "Bump version to %s"
-          git push
 
       - name: Publish to npm (OIDC auth)
         run: npm publish --access public
