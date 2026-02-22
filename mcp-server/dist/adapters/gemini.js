@@ -12,7 +12,7 @@ import { buildSimpleHandoff, buildHandoffPrompt, selectRole, } from '../handoff.
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
-const INACTIVITY_TIMEOUT_MS = 120000; // 2 min of no output = timeout
+const INACTIVITY_TIMEOUT_MS = 600000; // 10 min of no output = timeout (Gemini buffers entire response with --output-format json)
 const MAX_TIMEOUT_MS = 3600000; // 60 min absolute max
 const MAX_RETRIES = 2;
 const MAX_BUFFER_SIZE = 1024 * 1024; // 1MB max buffer
@@ -136,15 +136,16 @@ export class GeminiAdapter {
                     executionTimeMs: Date.now() - startTime,
                 };
             }
-            // If we used fallback and got minimal data, retry
-            if (usedFallback && attempt < MAX_RETRIES) {
+            // If output has no substantive data, retry regardless of parse path
+            if (attempt < MAX_RETRIES) {
                 const hasMinimalData = output.findings.length === 0 &&
                     output.agreements.length === 0 &&
-                    output.disagreements.length === 0 &&
-                    output.risk_assessment.summary === 'Unable to parse structured risk assessment';
+                    output.disagreements.length === 0;
                 if (hasMinimalData) {
-                    console.error(`[gemini] Received incomplete output (fallback parse with no data), retrying...`);
-                    return this.runWithRetry(request, attempt + 1, startTime, 'Received markdown output instead of JSON. Please provide valid JSON output.', result.stdout);
+                    console.error(`[gemini] Received empty output, retrying...`);
+                    return this.runWithRetry(request, attempt + 1, startTime, usedFallback
+                        ? 'Received markdown output instead of JSON. Please provide valid JSON output.'
+                        : 'Output contained no findings, agreements, or disagreements. Please provide substantive review.', result.stdout);
                 }
             }
             return {
@@ -172,7 +173,7 @@ export class GeminiAdapter {
                     success: false,
                     error: {
                         type: 'timeout',
-                        message: 'No output for 2 minutes - process may be hung',
+                        message: 'No output for 10 minutes - process may be hung',
                     },
                     suggestion: 'Try a smaller scope or use --focus',
                     executionTimeMs: Date.now() - startTime,

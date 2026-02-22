@@ -90,7 +90,7 @@ export const RiskAssessment = z.object({
     overall_level: z.enum(['critical', 'high', 'medium', 'low', 'minimal']),
     score: z.number().min(0).max(100).describe('Numeric risk score 0-100'),
     summary: z.string().max(300).describe('Brief risk summary'),
-    top_concerns: z.array(z.string()).max(5).describe('Top risk factors'),
+    top_concerns: z.array(z.string()).describe('Top risk factors'),
     mitigations: z.array(z.string()).optional().describe('Suggested mitigations'),
 });
 // =============================================================================
@@ -219,11 +219,64 @@ export function getReviewOutputJsonSchema() {
                     overall_level: { type: 'string', enum: ['critical', 'high', 'medium', 'low', 'minimal'] },
                     score: { type: 'number', minimum: 0, maximum: 100 },
                     summary: { type: 'string', maxLength: 300 },
-                    top_concerns: { type: 'array', items: { type: 'string' }, maxItems: 5 }
+                    top_concerns: { type: 'array', items: { type: 'string' } }
                 }
             }
         }
     };
+}
+/**
+ * Normalize reviewer output that deviates from the strict schema.
+ * Handles common patterns from external CLIs (e.g. Gemini returning
+ * agreements as strings instead of objects, missing required fields).
+ */
+function normalizeReviewOutput(parsed) {
+    const normalized = { ...parsed };
+    // Default reviewer if missing
+    if (!normalized.reviewer) {
+        normalized.reviewer = 'external';
+    }
+    // Normalize agreements: string[] -> Agreement[]
+    if (Array.isArray(normalized.agreements)) {
+        normalized.agreements = normalized.agreements.map((a) => {
+            if (typeof a === 'string') {
+                return { original_claim: a, assessment: 'correct', confidence: 0.7 };
+            }
+            return a;
+        });
+    }
+    else {
+        normalized.agreements = normalized.agreements ?? [];
+    }
+    // Default missing arrays
+    normalized.disagreements = normalized.disagreements ?? [];
+    normalized.alternatives = normalized.alternatives ?? [];
+    normalized.findings = normalized.findings ?? [];
+    // Normalize risk_assessment from simplified formats
+    if (!normalized.risk_assessment) {
+        const ra = normalized.risk_assessment;
+        normalized.risk_assessment = {
+            overall_level: 'medium',
+            score: 50,
+            summary: 'Risk assessment not provided by reviewer',
+            top_concerns: [],
+        };
+    }
+    else if (typeof normalized.risk_assessment === 'object') {
+        const ra = normalized.risk_assessment;
+        // Handle "level" instead of "overall_level", with case normalization
+        if (ra.level && !ra.overall_level) {
+            ra.overall_level = typeof ra.level === 'string' ? ra.level.toLowerCase() : ra.level;
+        }
+        else if (typeof ra.overall_level === 'string') {
+            ra.overall_level = ra.overall_level.toLowerCase();
+        }
+        // Default missing fields
+        ra.score = ra.score ?? 50;
+        ra.summary = ra.summary ?? 'No summary provided';
+        ra.top_concerns = ra.top_concerns ?? [];
+    }
+    return normalized;
 }
 /**
  * Attempt to parse and validate reviewer output.
@@ -233,8 +286,20 @@ export function parseReviewOutput(rawOutput) {
     try {
         // Try to extract JSON from the output (may be wrapped in markdown code blocks)
         let jsonStr = rawOutput;
+        // Gemini CLI with --output-format json wraps the response in an envelope:
+        // { "session_id": "...", "response": "```json\n{...}\n```" }
+        // Try to unwrap this envelope first, but only if it matches the envelope shape.
+        try {
+            const envelope = JSON.parse(rawOutput);
+            if (envelope && typeof envelope.session_id === 'string' && typeof envelope.response === 'string') {
+                jsonStr = envelope.response;
+            }
+        }
+        catch {
+            // Not a valid JSON envelope, continue with raw output
+        }
         // Extract from ```json ... ``` blocks
-        const jsonBlockMatch = rawOutput.match(/```(?:json)?\s*([\s\S]*?)```/);
+        const jsonBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
         if (jsonBlockMatch) {
             jsonStr = jsonBlockMatch[1].trim();
         }
@@ -245,7 +310,25 @@ export function parseReviewOutput(rawOutput) {
             jsonStr = jsonStr.slice(jsonStart, jsonEnd + 1);
         }
         const parsed = JSON.parse(jsonStr);
-        return ReviewOutput.parse(parsed);
+        // Try direct parse first
+        const result = ReviewOutput.safeParse(parsed);
+        if (result.success) {
+            return result.data;
+        }
+        // Normalize common deviations from external CLIs (e.g. Gemini)
+        // Only attempt if parsed object has at least one recognizable review field
+        const recognizedFields = ['findings', 'agreements', 'disagreements', 'alternatives', 'risk_assessment', 'reviewer'];
+        const hasRecognizedField = typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) &&
+            recognizedFields.some(f => f in parsed);
+        if (!hasRecognizedField) {
+            return null;
+        }
+        const normalized = normalizeReviewOutput(parsed);
+        const retryResult = ReviewOutput.safeParse(normalized);
+        if (retryResult.success) {
+            return retryResult.data;
+        }
+        return null;
     }
     catch {
         return null;

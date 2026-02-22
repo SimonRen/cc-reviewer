@@ -177,9 +177,22 @@ That's all.`;
     expect(result).toBeNull();
   });
 
-  it('should return null for incomplete output', () => {
-    const incomplete = { reviewer: 'test' }; // missing required fields
+  it('should normalize incomplete output with defaults', () => {
+    const incomplete = { reviewer: 'test' }; // missing required fields get normalized
     const result = parseReviewOutput(JSON.stringify(incomplete));
-    expect(result).toBeNull();
+    expect(result).not.toBeNull();
+    expect(result!.reviewer).toBe('test');
+    expect(result!.findings).toEqual([]);
+    expect(result!.agreements).toEqual([]);
+    expect(result!.disagreements).toEqual([]);
+    expect(result!.alternatives).toEqual([]);
+  });
+
+  it('should return null for unrecognizable structure', () => {
+    // No recognizable review fields - should not attempt normalization
+    const invalid = { foo: 'bar', baz: 123 };
+    expect(parseReviewOutput(JSON.stringify(invalid))).toBeNull();
+    // Arrays should also fail
+    expect(parseReviewOutput(JSON.stringify([1, 2, 3]))).toBeNull();
   });
 });

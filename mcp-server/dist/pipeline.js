@@ -366,7 +366,7 @@ export async function processReviewOutput(output, context) {
             verifiedCount: verified.length,
             rejectedCount: rejected.length,
             actionableCount,
-            topPriority: actionPlan.filter(a => a.action === 'fix_now').slice(0, 5),
+            topPriority: actionPlan.filter(a => a.action === 'fix_now'),
         },
     };
 }
