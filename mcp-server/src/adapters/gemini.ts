@@ -276,19 +276,24 @@ export class GeminiAdapter implements ReviewerAdapter {
     workingDir: string
   ): Promise<{ stdout: string; stderr: string; exitCode: number; truncated: boolean }> {
     return new Promise((resolve, reject) => {
-      // Gemini CLI uses positional prompt and --yolo for auto-approval
+      // Gemini CLI uses --yolo for auto-approval, prompt passed via stdin
+      // to avoid escaping issues with complex prompts containing newlines,
+      // backticks, JSON templates, etc.
       const args = [
         '--yolo',
         '--output-format', 'json',  // Force JSON output
         '--include-directories', workingDir,
-        prompt
       ];
 
       const proc = spawn('gemini', args, {
         cwd: workingDir,
-        stdio: ['ignore', 'pipe', 'pipe'],
+        stdio: ['pipe', 'pipe', 'pipe'],  // stdin is pipe for prompt delivery
         env: { ...process.env }
       });
+
+      // Deliver prompt via stdin — more stable than args for complex content
+      proc.stdin.write(prompt);
+      proc.stdin.end();
 
       let stdout = '';
       let stderr = '';

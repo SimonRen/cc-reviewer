@@ -228,12 +228,17 @@ export class CodexAdapter {
             if (schemaFile) {
                 args.push('--output-schema', schemaFile);
             }
-            args.push(prompt);
+            // Use '-' to read prompt from stdin — more stable for complex prompts
+            // with newlines, backticks, JSON templates, etc.
+            args.push('-');
             const proc = spawn('codex', args, {
                 cwd: workingDir,
-                stdio: ['ignore', 'pipe', 'pipe'],
+                stdio: ['pipe', 'pipe', 'pipe'], // stdin is pipe for prompt delivery
                 env: { ...process.env }
             });
+            // Deliver prompt via stdin
+            proc.stdin.write(prompt);
+            proc.stdin.end();
             let stdout = '';
             let stderr = '';
             let truncated = false;
