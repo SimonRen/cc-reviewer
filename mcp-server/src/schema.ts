@@ -132,14 +132,14 @@ export const UncertaintyResponse = z.object({
   uncertainty_index: z.number().int().positive().describe('1-based index of the uncertainty being addressed'),
   verified: z.boolean().describe('Whether the uncertainty was verified'),
   finding: z.string().describe('What the reviewer found'),
-  recommendation: z.string().optional().describe('What CC should do'),
+  recommendation: z.string().nullable().optional().describe('What CC should do'),
 });
 export type UncertaintyResponse = z.infer<typeof UncertaintyResponse>;
 
 export const QuestionAnswer = z.object({
   question_index: z.number().int().positive().describe('1-based index of the question being answered'),
   answer: z.string().describe('The reviewer answer'),
-  confidence: ConfidenceScore.optional().describe('Confidence in the answer (0-1)'),
+  confidence: ConfidenceScore.nullable().optional().describe('Confidence in the answer (0-1)'),
 });
 export type QuestionAnswer = z.infer<typeof QuestionAnswer>;
 
@@ -149,7 +149,7 @@ export type QuestionAnswer = z.infer<typeof QuestionAnswer>;
 
 export const ReviewOutput = z.object({
   reviewer: z.string().describe('Name of the reviewing model'),
-  timestamp: z.string().datetime().optional(),
+  timestamp: z.string().datetime().nullable().optional(),
 
   // Core sections
   findings: z.array(ReviewFinding).describe('New issues discovered'),
@@ -157,16 +157,16 @@ export const ReviewOutput = z.object({
   disagreements: z.array(Disagreement).describe("Challenges to CC's claims"),
   alternatives: z.array(Alternative).describe('Alternative approaches to consider'),
 
-  // Responses to CC's uncertainties and questions
-  uncertainty_responses: z.array(UncertaintyResponse).optional().describe('Responses to CC uncertainties'),
-  question_answers: z.array(QuestionAnswer).optional().describe('Answers to CC questions'),
+  // Responses to CC's uncertainties and questions — nullable because OpenAI strict mode sends null
+  uncertainty_responses: z.array(UncertaintyResponse).nullable().optional().describe('Responses to CC uncertainties'),
+  question_answers: z.array(QuestionAnswer).nullable().optional().describe('Answers to CC questions'),
 
   // Summary
   risk_assessment: RiskAssessment,
 
-  // Metadata
-  files_examined: z.array(z.string()).optional().describe('Files the reviewer actually read'),
-  execution_notes: z.string().optional().describe('Notes about the review process'),
+  // Metadata — nullable because OpenAI strict mode sends null
+  files_examined: z.array(z.string()).nullable().optional().describe('Files the reviewer actually read'),
+  execution_notes: z.string().nullable().optional().describe('Notes about the review process'),
 });
 export type ReviewOutput = z.infer<typeof ReviewOutput>;
 
@@ -203,7 +203,7 @@ export function getReviewOutputJsonSchema(): object {
   return {
     type: 'object',
     additionalProperties: false,
-    required: ['reviewer', 'findings', 'agreements', 'disagreements', 'alternatives', 'risk_assessment'],
+    required: ['reviewer', 'findings', 'agreements', 'disagreements', 'alternatives', 'risk_assessment', 'uncertainty_responses', 'question_answers'],
     properties: {
       reviewer: { type: 'string' },
       findings: {
@@ -282,12 +282,12 @@ export function getReviewOutputJsonSchema(): object {
         items: {
           type: 'object',
           additionalProperties: false,
-          required: ['uncertainty_index', 'verified', 'finding'],
+          required: ['uncertainty_index', 'verified', 'finding', 'recommendation'],
           properties: {
             uncertainty_index: { type: 'integer', minimum: 1 },
             verified: { type: 'boolean' },
             finding: { type: 'string' },
-            recommendation: { type: 'string' }
+            recommendation: { anyOf: [{ type: 'string' }, { type: 'null' }] }
           }
         }
       },
@@ -296,11 +296,11 @@ export function getReviewOutputJsonSchema(): object {
         items: {
           type: 'object',
           additionalProperties: false,
-          required: ['question_index', 'answer'],
+          required: ['question_index', 'answer', 'confidence'],
           properties: {
             question_index: { type: 'integer', minimum: 1 },
             answer: { type: 'string' },
-            confidence: { type: 'number', minimum: 0, maximum: 1 }
+            confidence: { anyOf: [{ type: 'number', minimum: 0, maximum: 1 }, { type: 'null' }] }
           }
         }
       },
@@ -538,6 +538,228 @@ export function parseLegacyMarkdownOutput(markdown: string, reviewer: string): R
     }
 
     return output;
+  } catch {
+    return null;
+  }
+}
+
+// =============================================================================
+// PEER OUTPUT SCHEMA (General-purpose coworker responses)
+// =============================================================================
+
+export const SuggestedAction = z.object({
+  action: z.string().describe('What to do'),
+  priority: z.enum(['high', 'medium', 'low']),
+  file: z.string().nullable().optional().describe('Relevant file path'),
+  rationale: z.string().describe('Why this action is recommended'),
+});
+export type SuggestedAction = z.infer<typeof SuggestedAction>;
+
+export const FileReference = z.object({
+  path: z.string().describe('Relative file path'),
+  lines: z.string().nullable().optional().describe('Line range, e.g. "10-25"'),
+  relevance: z.string().describe('Why this file matters'),
+});
+export type FileReference = z.infer<typeof FileReference>;
+
+export const PeerOutput = z.object({
+  responder: z.string().describe('"codex" or "gemini"'),
+  timestamp: z.string().nullable().optional(),
+
+  // Core response
+  answer: z.string().describe('Main response text (markdown)'),
+  confidence: ConfidenceScore.describe('Confidence in the response (0-1)'),
+
+  // Structured breakdown
+  key_points: z.array(z.string()).describe('Bullet summary of main points'),
+
+  // Actionable items
+  suggested_actions: z.array(SuggestedAction).describe('Recommended actions'),
+
+  // File references
+  file_references: z.array(FileReference).describe('Files examined by the peer'),
+
+  // Optional — nullable because OpenAI strict mode sends null instead of omitting
+  alternatives: z.array(Alternative).nullable().optional().describe('Alternative approaches'),
+  execution_notes: z.string().nullable().optional().describe('Notes about the process'),
+});
+export type PeerOutput = z.infer<typeof PeerOutput>;
+
+// =============================================================================
+// PEER INPUT SCHEMA
+// =============================================================================
+
+export const TaskType = z.enum(['plan', 'debug', 'explain', 'question', 'fix', 'explore', 'general']);
+export type TaskType = z.infer<typeof TaskType>;
+
+export const PeerInputSchema = z.object({
+  workingDir: z.string().describe('Working directory for filesystem access'),
+  prompt: z.string().describe('The question or request from CC'),
+  taskType: TaskType.optional().describe('Hint about the type of task'),
+  relevantFiles: z.array(z.string()).optional().describe('Files the peer should focus on'),
+  context: z.string().optional().describe('Additional context (error messages, prior analysis)'),
+  focusAreas: z.array(z.enum([
+    'security', 'performance', 'architecture', 'correctness',
+    'maintainability', 'scalability', 'testing', 'documentation'
+  ])).optional().describe('Areas to focus on'),
+  customPrompt: z.string().optional().describe('Additional instructions for the peer'),
+});
+export type PeerInput = z.infer<typeof PeerInputSchema>;
+
+// =============================================================================
+// PEER OUTPUT JSON SCHEMA (for embedding in prompts)
+// =============================================================================
+
+export function getPeerOutputJsonSchema(): object {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['responder', 'answer', 'confidence', 'key_points', 'suggested_actions', 'file_references', 'timestamp', 'alternatives', 'execution_notes'],
+    properties: {
+      responder: { type: 'string' },
+      timestamp: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+      answer: { type: 'string' },
+      confidence: { type: 'number', minimum: 0, maximum: 1 },
+      key_points: {
+        type: 'array',
+        items: { type: 'string' },
+      },
+      suggested_actions: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['action', 'priority', 'rationale', 'file'],
+          properties: {
+            action: { type: 'string' },
+            priority: { type: 'string', enum: ['high', 'medium', 'low'] },
+            file: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            rationale: { type: 'string' },
+          },
+        },
+      },
+      file_references: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['path', 'relevance', 'lines'],
+          properties: {
+            path: { type: 'string' },
+            lines: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+            relevance: { type: 'string' },
+          },
+        },
+      },
+      alternatives: {
+        anyOf: [
+          {
+            type: 'array',
+            items: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['topic', 'current_approach', 'alternative', 'tradeoffs', 'recommendation'],
+              properties: {
+                topic: { type: 'string' },
+                current_approach: { type: 'string' },
+                alternative: { type: 'string' },
+                tradeoffs: {
+                  type: 'object',
+                  additionalProperties: false,
+                  required: ['pros', 'cons'],
+                  properties: {
+                    pros: { type: 'array', items: { type: 'string' } },
+                    cons: { type: 'array', items: { type: 'string' } },
+                  },
+                },
+                recommendation: { type: 'string', enum: ['strongly_prefer', 'consider', 'situational', 'informational'] },
+              },
+            },
+          },
+          { type: 'null' },
+        ],
+      },
+      execution_notes: { anyOf: [{ type: 'string' }, { type: 'null' }] },
+    },
+  };
+}
+
+// =============================================================================
+// PEER OUTPUT PARSING
+// =============================================================================
+
+function normalizePeerOutput(parsed: Record<string, unknown>): Record<string, unknown> {
+  const normalized = { ...parsed };
+
+  if (!normalized.responder) {
+    normalized.responder = 'external';
+  }
+
+  normalized.key_points = normalized.key_points ?? [];
+  normalized.suggested_actions = normalized.suggested_actions ?? [];
+  normalized.file_references = normalized.file_references ?? [];
+
+  if (normalized.confidence === undefined) {
+    normalized.confidence = 0.5;
+  }
+
+  if (!normalized.answer && typeof normalized.response === 'string') {
+    normalized.answer = normalized.response;
+  }
+
+  return normalized;
+}
+
+export function parsePeerOutput(rawOutput: string): PeerOutput | null {
+  try {
+    let jsonStr = rawOutput;
+
+    // Unwrap Gemini envelope
+    try {
+      const envelope = JSON.parse(rawOutput);
+      if (envelope && typeof envelope.session_id === 'string' && typeof envelope.response === 'string') {
+        jsonStr = envelope.response;
+      }
+    } catch {
+      // Not an envelope
+    }
+
+    // Extract from ```json ... ``` blocks
+    const jsonBlockMatch = jsonStr.match(/```(?:json)?\s*([\s\S]*?)```/);
+    if (jsonBlockMatch) {
+      jsonStr = jsonBlockMatch[1].trim();
+    }
+
+    // Find JSON object boundaries
+    const jsonStart = jsonStr.indexOf('{');
+    const jsonEnd = jsonStr.lastIndexOf('}');
+    if (jsonStart !== -1 && jsonEnd !== -1 && jsonEnd > jsonStart) {
+      jsonStr = jsonStr.slice(jsonStart, jsonEnd + 1);
+    }
+
+    const parsed = JSON.parse(jsonStr);
+
+    // Try direct parse
+    const result = PeerOutput.safeParse(parsed);
+    if (result.success) {
+      return result.data;
+    }
+
+    // Normalize and retry
+    const recognizedFields = ['responder', 'answer', 'response', 'key_points', 'suggested_actions', 'file_references', 'confidence'];
+    const hasRecognizedField = typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed) &&
+      recognizedFields.some(f => f in parsed);
+    if (!hasRecognizedField) {
+      return null;
+    }
+
+    const normalized = normalizePeerOutput(parsed);
+    const retryResult = PeerOutput.safeParse(normalized);
+    if (retryResult.success) {
+      return retryResult.data;
+    }
+
+    return null;
   } catch {
     return null;
   }

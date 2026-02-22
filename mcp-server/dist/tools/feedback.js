@@ -93,7 +93,7 @@ function formatSingleReviewResponse(result, modelName) {
     if (output.question_answers && output.question_answers.length > 0) {
         lines.push(`### Question Answers (${output.question_answers.length})\n`);
         for (const qa of output.question_answers) {
-            const confidence = qa.confidence !== undefined ? ` [${Math.round(qa.confidence * 100)}%]` : '';
+            const confidence = qa.confidence != null ? ` [${Math.round(qa.confidence * 100)}%]` : '';
             lines.push(`**Q${qa.question_index}**${confidence}: ${qa.answer}`);
             lines.push('');
         }

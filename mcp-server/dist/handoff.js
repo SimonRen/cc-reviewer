@@ -476,3 +476,125 @@ export function enhanceHandoff(handoff, uncertainties, questions, decisions) {
         decisions: decisions || handoff.decisions,
     };
 }
+/**
+ * Build a prompt for general-purpose peer assistance (not review).
+ * The peer acts as a collaborative coworker, not a critic.
+ */
+export function buildPeerPrompt(options) {
+    const { workingDir, prompt, taskType, relevantFiles, context, focusAreas, customInstructions } = options;
+    // Select role based on focus areas (reuse existing role selection)
+    const role = selectRole(focusAreas);
+    const sections = [];
+    // SECTION 1: ROLE (adapted from review role)
+    sections.push(`# ROLE: ${role.name} — Peer Engineer
+
+${role.systemPrompt}
+
+You are acting as a collaborative peer engineer, NOT a reviewer.
+Your job is to help Claude Code (CC) with whatever it needs:
+planning, debugging, explaining, fixing, exploring, or answering questions.
+Be direct, specific, and actionable.`);
+    // SECTION 2: TASK
+    const taskLabel = taskType ? ` [${taskType.toUpperCase()}]` : '';
+    sections.push(`
+---
+
+# YOUR TASK${taskLabel}
+
+**Working Directory:** \`${workingDir}\`
+
+**CC's Request:**
+${prompt}
+${context ? `\n**Additional Context:**\n${context}` : ''}`);
+    // SECTION 3: RELEVANT FILES
+    if (relevantFiles && relevantFiles.length > 0) {
+        sections.push(`
+---
+
+# RELEVANT FILES
+
+CC suggests focusing on these files:
+${relevantFiles.map(f => `- \`${f}\``).join('\n')}
+
+Read these files to understand the context. Also explore related files if needed.`);
+    }
+    // SECTION 4: FOCUS AREAS
+    if (focusAreas && focusAreas.length > 0) {
+        sections.push(`
+---
+
+# FOCUS AREAS
+
+Prioritize these aspects: ${focusAreas.join(', ')}`);
+    }
+    // SECTION 5: CUSTOM INSTRUCTIONS
+    if (customInstructions) {
+        sections.push(`
+---
+
+# ADDITIONAL INSTRUCTIONS
+
+${customInstructions}`);
+    }
+    // SECTION 6: HOW TO WORK
+    sections.push(`
+---
+
+# HOW TO WORK
+
+1. Read the relevant files in the working directory
+2. Use \`git log --oneline -10\` and \`git diff\` if useful
+3. Think through the problem step by step
+4. Provide a clear, actionable answer
+5. Reference specific files and line numbers
+6. Suggest concrete next steps`);
+    // SECTION 7: OUTPUT FORMAT
+    sections.push(`
+---
+
+# OUTPUT FORMAT
+
+Respond with valid JSON:
+
+\`\`\`json
+{
+  "responder": "<your-name>",
+  "answer": "Your detailed response in markdown",
+  "confidence": 0.0-1.0,
+  "key_points": ["Point 1", "Point 2"],
+  "suggested_actions": [
+    {
+      "action": "What to do",
+      "priority": "high|medium|low",
+      "file": "path/to/file.ts",
+      "rationale": "Why"
+    }
+  ],
+  "file_references": [
+    {
+      "path": "path/to/file.ts",
+      "lines": "10-25",
+      "relevance": "Why this file matters"
+    }
+  ],
+  "alternatives": [
+    {
+      "topic": "The decision point",
+      "current_approach": "What exists now",
+      "alternative": "Different approach",
+      "tradeoffs": { "pros": ["..."], "cons": ["..."] },
+      "recommendation": "strongly_prefer|consider|situational|informational"
+    }
+  ],
+  "execution_notes": "Any notes about your process"
+}
+\`\`\`
+
+**Rules:**
+- Read files before making claims
+- Reference specific file paths and line numbers
+- Be concrete and actionable — no vague suggestions
+- Confidence reflects how sure YOU are about your answer
+- Include alternatives when there are meaningful tradeoffs`);
+    return sections.join('\n');
+}

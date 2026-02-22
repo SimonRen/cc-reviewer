@@ -22,6 +22,9 @@ export type CliType = 'codex' | 'gemini';
 // Reasoning effort level for Codex
 export type ReasoningEffort = 'high' | 'xhigh';
 
+// Task types for peer ask tools
+export type TaskType = 'plan' | 'debug' | 'explain' | 'question' | 'fix' | 'explore' | 'general';
+
 // Request to get feedback from an external CLI
 export interface FeedbackRequest {
   workingDir: string;         // CLI working directory

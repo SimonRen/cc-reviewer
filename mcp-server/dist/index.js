@@ -19,6 +19,8 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
 import { handleCodexReview, handleGeminiReview, handleMultiReview, ReviewInputSchema, TOOL_DEFINITIONS } from './tools/feedback.js';
+import { handleAskCodex, handleAskGemini, handleAskMulti, PEER_TOOL_DEFINITIONS, } from './tools/peer.js';
+import { PeerInputSchema } from './schema.js';
 import { logCliStatus } from './cli/check.js';
 import { installCommands } from './commands.js';
 // Handle --setup flag: install commands and exit
@@ -51,6 +53,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             TOOL_DEFINITIONS.codex_review,
             TOOL_DEFINITIONS.gemini_review,
             TOOL_DEFINITIONS.multi_review,
+            PEER_TOOL_DEFINITIONS.ask_codex,
+            PEER_TOOL_DEFINITIONS.ask_gemini,
+            PEER_TOOL_DEFINITIONS.ask_multi,
         ],
     };
 });
@@ -70,6 +75,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             case 'multi_review': {
                 const input = ReviewInputSchema.parse(args);
                 return await handleMultiReview(input);
+            }
+            case 'ask_codex': {
+                const input = PeerInputSchema.parse(args);
+                return await handleAskCodex(input);
+            }
+            case 'ask_gemini': {
+                const input = PeerInputSchema.parse(args);
+                return await handleAskGemini(input);
+            }
+            case 'ask_multi': {
+                const input = PeerInputSchema.parse(args);
+                return await handleAskMulti(input);
             }
             default:
                 return {

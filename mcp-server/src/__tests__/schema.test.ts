@@ -12,6 +12,10 @@ import {
   QuestionAnswer,
   getReviewOutputJsonSchema,
   parseReviewOutput,
+  PeerOutput,
+  PeerInputSchema,
+  getPeerOutputJsonSchema,
+  parsePeerOutput,
 } from '../schema.js';
 
 // =============================================================================
@@ -325,16 +329,16 @@ describe('QuestionAnswer Schema', () => {
 // =============================================================================
 
 describe('JSON Schema - New Fields', () => {
-  it('should include uncertainty_responses as non-required', () => {
+  it('should include uncertainty_responses as required (OpenAI strict mode)', () => {
     const schema = getReviewOutputJsonSchema() as any;
     expect(schema.properties.uncertainty_responses).toBeDefined();
-    expect(schema.required).not.toContain('uncertainty_responses');
+    expect(schema.required).toContain('uncertainty_responses');
   });
 
-  it('should include question_answers as non-required', () => {
+  it('should include question_answers as required (OpenAI strict mode)', () => {
     const schema = getReviewOutputJsonSchema() as any;
     expect(schema.properties.question_answers).toBeDefined();
-    expect(schema.required).not.toContain('question_answers');
+    expect(schema.required).toContain('question_answers');
   });
 
   it('should have correct structure for uncertainty_responses items', () => {
@@ -352,5 +356,198 @@ describe('JSON Schema - New Fields', () => {
     expect(itemProps.question_index).toBeDefined();
     expect(itemProps.answer).toBeDefined();
     expect(itemProps.confidence).toBeDefined();
+  });
+});
+
+// =============================================================================
+// PEER OUTPUT SCHEMA TESTS
+// =============================================================================
+
+describe('PeerOutput Schema', () => {
+  const validPeerOutput = {
+    responder: 'codex',
+    timestamp: '2026-02-22T00:00:00Z',
+    answer: 'The bug is in the authentication middleware.',
+    confidence: 0.85,
+    key_points: ['Auth middleware skips validation for /api/health', 'Missing token check'],
+    suggested_actions: [
+      {
+        action: 'Add token validation to middleware',
+        priority: 'high',
+        file: 'src/middleware/auth.ts',
+        rationale: 'Currently unauthenticated requests pass through',
+      },
+    ],
+    file_references: [
+      {
+        path: 'src/middleware/auth.ts',
+        lines: '15-30',
+        relevance: 'Authentication check logic',
+      },
+    ],
+  };
+
+  it('should accept valid peer output', () => {
+    const result = PeerOutput.safeParse(validPeerOutput);
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept output without optional fields', () => {
+    const minimal = {
+      responder: 'gemini',
+      timestamp: '2026-02-22T00:00:00Z',
+      answer: 'Here is the explanation.',
+      confidence: 0.7,
+      key_points: ['Point 1'],
+      suggested_actions: [],
+      file_references: [],
+    };
+    const result = PeerOutput.safeParse(minimal);
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject missing required fields', () => {
+    expect(PeerOutput.safeParse({}).success).toBe(false);
+    expect(PeerOutput.safeParse({ responder: 'codex' }).success).toBe(false);
+    expect(PeerOutput.safeParse({ answer: 'test' }).success).toBe(false);
+  });
+
+  it('should reject confidence out of range', () => {
+    expect(PeerOutput.safeParse({ ...validPeerOutput, confidence: 1.5 }).success).toBe(false);
+    expect(PeerOutput.safeParse({ ...validPeerOutput, confidence: -0.1 }).success).toBe(false);
+  });
+
+  it('should accept output with alternatives', () => {
+    const withAlts = {
+      ...validPeerOutput,
+      alternatives: [{
+        topic: 'Auth strategy',
+        current_approach: 'JWT middleware',
+        alternative: 'Session-based auth',
+        tradeoffs: { pros: ['Simpler'], cons: ['Stateful'] },
+        recommendation: 'consider',
+      }],
+    };
+    const result = PeerOutput.safeParse(withAlts);
+    expect(result.success).toBe(true);
+  });
+
+  it('should validate suggested_actions priority enum', () => {
+    const badPriority = {
+      ...validPeerOutput,
+      suggested_actions: [{
+        action: 'test',
+        priority: 'urgent',
+        rationale: 'test',
+      }],
+    };
+    expect(PeerOutput.safeParse(badPriority).success).toBe(false);
+  });
+});
+
+describe('PeerInputSchema', () => {
+  it('should accept valid input with required fields only', () => {
+    const result = PeerInputSchema.safeParse({
+      workingDir: '/path/to/project',
+      prompt: 'Help me find the bug in auth',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept input with all optional fields', () => {
+    const result = PeerInputSchema.safeParse({
+      workingDir: '/path/to/project',
+      prompt: 'Help me plan the refactor',
+      taskType: 'plan',
+      relevantFiles: ['src/auth.ts', 'src/middleware.ts'],
+      context: 'Getting 401 errors on valid tokens',
+      focusAreas: ['security', 'correctness'],
+      customPrompt: 'Focus on JWT validation',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject missing workingDir', () => {
+    expect(PeerInputSchema.safeParse({ prompt: 'help' }).success).toBe(false);
+  });
+
+  it('should reject missing prompt', () => {
+    expect(PeerInputSchema.safeParse({ workingDir: '/tmp' }).success).toBe(false);
+  });
+
+  it('should reject invalid taskType', () => {
+    expect(PeerInputSchema.safeParse({
+      workingDir: '/tmp',
+      prompt: 'help',
+      taskType: 'invalid',
+    }).success).toBe(false);
+  });
+});
+
+describe('getPeerOutputJsonSchema', () => {
+  it('should return valid JSON schema object', () => {
+    const schema = getPeerOutputJsonSchema() as any;
+    expect(schema.type).toBe('object');
+    expect(schema.required).toContain('responder');
+    expect(schema.required).toContain('answer');
+    expect(schema.required).toContain('confidence');
+    expect(schema.required).toContain('key_points');
+    expect(schema.required).toContain('suggested_actions');
+    expect(schema.required).toContain('file_references');
+  });
+
+  it('should have correct suggested_actions item structure', () => {
+    const schema = getPeerOutputJsonSchema() as any;
+    const actionProps = schema.properties.suggested_actions.items.properties;
+    expect(actionProps.action).toBeDefined();
+    expect(actionProps.priority).toBeDefined();
+    expect(actionProps.priority.enum).toEqual(['high', 'medium', 'low']);
+    expect(actionProps.rationale).toBeDefined();
+  });
+});
+
+describe('parsePeerOutput', () => {
+  const validOutput = {
+    responder: 'codex',
+    timestamp: '2026-02-22T00:00:00Z',
+    answer: 'The issue is X.',
+    confidence: 0.8,
+    key_points: ['Point 1'],
+    suggested_actions: [],
+    file_references: [],
+  };
+
+  it('should parse valid JSON string', () => {
+    const result = parsePeerOutput(JSON.stringify(validOutput));
+    expect(result).not.toBeNull();
+    expect(result?.responder).toBe('codex');
+  });
+
+  it('should extract JSON from markdown code blocks', () => {
+    const markdown = `Here:\n\`\`\`json\n${JSON.stringify(validOutput)}\n\`\`\`\nDone.`;
+    const result = parsePeerOutput(markdown);
+    expect(result).not.toBeNull();
+  });
+
+  it('should return null for invalid JSON', () => {
+    expect(parsePeerOutput('not json')).toBeNull();
+  });
+
+  it('should handle Gemini envelope', () => {
+    const envelope = JSON.stringify({
+      session_id: 'abc',
+      response: '```json\n' + JSON.stringify(validOutput) + '\n```',
+    });
+    const result = parsePeerOutput(envelope);
+    expect(result).not.toBeNull();
+  });
+
+  it('should normalize missing optional arrays', () => {
+    const partial = { responder: 'codex', answer: 'test', confidence: 0.5 };
+    const result = parsePeerOutput(JSON.stringify(partial));
+    expect(result).not.toBeNull();
+    expect(result!.key_points).toEqual([]);
+    expect(result!.suggested_actions).toEqual([]);
+    expect(result!.file_references).toEqual([]);
   });
 });

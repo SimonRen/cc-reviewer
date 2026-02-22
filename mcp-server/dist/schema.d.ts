@@ -204,36 +204,36 @@ export declare const UncertaintyResponse: z.ZodObject<{
     uncertainty_index: z.ZodNumber;
     verified: z.ZodBoolean;
     finding: z.ZodString;
-    recommendation: z.ZodOptional<z.ZodString>;
+    recommendation: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     verified: boolean;
     uncertainty_index: number;
     finding: string;
-    recommendation?: string | undefined;
+    recommendation?: string | null | undefined;
 }, {
     verified: boolean;
     uncertainty_index: number;
     finding: string;
-    recommendation?: string | undefined;
+    recommendation?: string | null | undefined;
 }>;
 export type UncertaintyResponse = z.infer<typeof UncertaintyResponse>;
 export declare const QuestionAnswer: z.ZodObject<{
     question_index: z.ZodNumber;
     answer: z.ZodString;
-    confidence: z.ZodOptional<z.ZodNumber>;
+    confidence: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
 }, "strip", z.ZodTypeAny, {
     question_index: number;
     answer: string;
-    confidence?: number | undefined;
+    confidence?: number | null | undefined;
 }, {
     question_index: number;
     answer: string;
-    confidence?: number | undefined;
+    confidence?: number | null | undefined;
 }>;
 export type QuestionAnswer = z.infer<typeof QuestionAnswer>;
 export declare const ReviewOutput: z.ZodObject<{
     reviewer: z.ZodString;
-    timestamp: z.ZodOptional<z.ZodString>;
+    timestamp: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     findings: z.ZodArray<z.ZodObject<{
         id: z.ZodString;
         category: z.ZodEnum<["security", "performance", "architecture", "correctness", "maintainability", "scalability", "testing", "documentation", "best-practice", "other"]>;
@@ -379,35 +379,35 @@ export declare const ReviewOutput: z.ZodObject<{
         alternative: string;
         recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
     }>, "many">;
-    uncertainty_responses: z.ZodOptional<z.ZodArray<z.ZodObject<{
+    uncertainty_responses: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodObject<{
         uncertainty_index: z.ZodNumber;
         verified: z.ZodBoolean;
         finding: z.ZodString;
-        recommendation: z.ZodOptional<z.ZodString>;
+        recommendation: z.ZodOptional<z.ZodNullable<z.ZodString>>;
     }, "strip", z.ZodTypeAny, {
         verified: boolean;
         uncertainty_index: number;
         finding: string;
-        recommendation?: string | undefined;
+        recommendation?: string | null | undefined;
     }, {
         verified: boolean;
         uncertainty_index: number;
         finding: string;
-        recommendation?: string | undefined;
-    }>, "many">>;
-    question_answers: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        recommendation?: string | null | undefined;
+    }>, "many">>>;
+    question_answers: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodObject<{
         question_index: z.ZodNumber;
         answer: z.ZodString;
-        confidence: z.ZodOptional<z.ZodNumber>;
+        confidence: z.ZodOptional<z.ZodNullable<z.ZodNumber>>;
     }, "strip", z.ZodTypeAny, {
         question_index: number;
         answer: string;
-        confidence?: number | undefined;
+        confidence?: number | null | undefined;
     }, {
         question_index: number;
         answer: string;
-        confidence?: number | undefined;
-    }>, "many">>;
+        confidence?: number | null | undefined;
+    }>, "many">>>;
     risk_assessment: z.ZodObject<{
         overall_level: z.ZodEnum<["critical", "high", "medium", "low", "minimal"]>;
         score: z.ZodNumber;
@@ -427,8 +427,8 @@ export declare const ReviewOutput: z.ZodObject<{
         top_concerns: string[];
         mitigations?: string[] | undefined;
     }>;
-    files_examined: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
-    execution_notes: z.ZodOptional<z.ZodString>;
+    files_examined: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodString, "many">>>;
+    execution_notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     findings: {
         severity: "info" | "high" | "critical" | "medium" | "low";
@@ -483,20 +483,20 @@ export declare const ReviewOutput: z.ZodObject<{
         top_concerns: string[];
         mitigations?: string[] | undefined;
     };
-    timestamp?: string | undefined;
+    timestamp?: string | null | undefined;
     uncertainty_responses?: {
         verified: boolean;
         uncertainty_index: number;
         finding: string;
-        recommendation?: string | undefined;
-    }[] | undefined;
+        recommendation?: string | null | undefined;
+    }[] | null | undefined;
     question_answers?: {
         question_index: number;
         answer: string;
-        confidence?: number | undefined;
-    }[] | undefined;
-    files_examined?: string[] | undefined;
-    execution_notes?: string | undefined;
+        confidence?: number | null | undefined;
+    }[] | null | undefined;
+    files_examined?: string[] | null | undefined;
+    execution_notes?: string | null | undefined;
 }, {
     findings: {
         severity: "info" | "high" | "critical" | "medium" | "low";
@@ -551,20 +551,20 @@ export declare const ReviewOutput: z.ZodObject<{
         top_concerns: string[];
         mitigations?: string[] | undefined;
     };
-    timestamp?: string | undefined;
+    timestamp?: string | null | undefined;
     uncertainty_responses?: {
         verified: boolean;
         uncertainty_index: number;
         finding: string;
-        recommendation?: string | undefined;
-    }[] | undefined;
+        recommendation?: string | null | undefined;
+    }[] | null | undefined;
     question_answers?: {
         question_index: number;
         answer: string;
-        confidence?: number | undefined;
-    }[] | undefined;
-    files_examined?: string[] | undefined;
-    execution_notes?: string | undefined;
+        confidence?: number | null | undefined;
+    }[] | null | undefined;
+    files_examined?: string[] | null | undefined;
+    execution_notes?: string | null | undefined;
 }>;
 export type ReviewOutput = z.infer<typeof ReviewOutput>;
 export declare const PeerScore: z.ZodObject<{
@@ -644,3 +644,192 @@ export declare function parseReviewOutput(rawOutput: string): ReviewOutput | nul
  * This provides backwards compatibility during transition.
  */
 export declare function parseLegacyMarkdownOutput(markdown: string, reviewer: string): ReviewOutput | null;
+export declare const SuggestedAction: z.ZodObject<{
+    action: z.ZodString;
+    priority: z.ZodEnum<["high", "medium", "low"]>;
+    file: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    rationale: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    rationale: string;
+    action: string;
+    priority: "high" | "medium" | "low";
+    file?: string | null | undefined;
+}, {
+    rationale: string;
+    action: string;
+    priority: "high" | "medium" | "low";
+    file?: string | null | undefined;
+}>;
+export type SuggestedAction = z.infer<typeof SuggestedAction>;
+export declare const FileReference: z.ZodObject<{
+    path: z.ZodString;
+    lines: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    relevance: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    path: string;
+    relevance: string;
+    lines?: string | null | undefined;
+}, {
+    path: string;
+    relevance: string;
+    lines?: string | null | undefined;
+}>;
+export type FileReference = z.infer<typeof FileReference>;
+export declare const PeerOutput: z.ZodObject<{
+    responder: z.ZodString;
+    timestamp: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+    answer: z.ZodString;
+    confidence: z.ZodNumber;
+    key_points: z.ZodArray<z.ZodString, "many">;
+    suggested_actions: z.ZodArray<z.ZodObject<{
+        action: z.ZodString;
+        priority: z.ZodEnum<["high", "medium", "low"]>;
+        file: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        rationale: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        rationale: string;
+        action: string;
+        priority: "high" | "medium" | "low";
+        file?: string | null | undefined;
+    }, {
+        rationale: string;
+        action: string;
+        priority: "high" | "medium" | "low";
+        file?: string | null | undefined;
+    }>, "many">;
+    file_references: z.ZodArray<z.ZodObject<{
+        path: z.ZodString;
+        lines: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+        relevance: z.ZodString;
+    }, "strip", z.ZodTypeAny, {
+        path: string;
+        relevance: string;
+        lines?: string | null | undefined;
+    }, {
+        path: string;
+        relevance: string;
+        lines?: string | null | undefined;
+    }>, "many">;
+    alternatives: z.ZodOptional<z.ZodNullable<z.ZodArray<z.ZodObject<{
+        topic: z.ZodString;
+        current_approach: z.ZodString;
+        alternative: z.ZodString;
+        tradeoffs: z.ZodObject<{
+            pros: z.ZodArray<z.ZodString, "many">;
+            cons: z.ZodArray<z.ZodString, "many">;
+        }, "strip", z.ZodTypeAny, {
+            pros: string[];
+            cons: string[];
+        }, {
+            pros: string[];
+            cons: string[];
+        }>;
+        recommendation: z.ZodEnum<["strongly_prefer", "consider", "situational", "informational"]>;
+    }, "strip", z.ZodTypeAny, {
+        topic: string;
+        tradeoffs: {
+            pros: string[];
+            cons: string[];
+        };
+        current_approach: string;
+        alternative: string;
+        recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
+    }, {
+        topic: string;
+        tradeoffs: {
+            pros: string[];
+            cons: string[];
+        };
+        current_approach: string;
+        alternative: string;
+        recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
+    }>, "many">>>;
+    execution_notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
+}, "strip", z.ZodTypeAny, {
+    confidence: number;
+    answer: string;
+    responder: string;
+    key_points: string[];
+    suggested_actions: {
+        rationale: string;
+        action: string;
+        priority: "high" | "medium" | "low";
+        file?: string | null | undefined;
+    }[];
+    file_references: {
+        path: string;
+        relevance: string;
+        lines?: string | null | undefined;
+    }[];
+    alternatives?: {
+        topic: string;
+        tradeoffs: {
+            pros: string[];
+            cons: string[];
+        };
+        current_approach: string;
+        alternative: string;
+        recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
+    }[] | null | undefined;
+    timestamp?: string | null | undefined;
+    execution_notes?: string | null | undefined;
+}, {
+    confidence: number;
+    answer: string;
+    responder: string;
+    key_points: string[];
+    suggested_actions: {
+        rationale: string;
+        action: string;
+        priority: "high" | "medium" | "low";
+        file?: string | null | undefined;
+    }[];
+    file_references: {
+        path: string;
+        relevance: string;
+        lines?: string | null | undefined;
+    }[];
+    alternatives?: {
+        topic: string;
+        tradeoffs: {
+            pros: string[];
+            cons: string[];
+        };
+        current_approach: string;
+        alternative: string;
+        recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
+    }[] | null | undefined;
+    timestamp?: string | null | undefined;
+    execution_notes?: string | null | undefined;
+}>;
+export type PeerOutput = z.infer<typeof PeerOutput>;
+export declare const TaskType: z.ZodEnum<["plan", "debug", "explain", "question", "fix", "explore", "general"]>;
+export type TaskType = z.infer<typeof TaskType>;
+export declare const PeerInputSchema: z.ZodObject<{
+    workingDir: z.ZodString;
+    prompt: z.ZodString;
+    taskType: z.ZodOptional<z.ZodEnum<["plan", "debug", "explain", "question", "fix", "explore", "general"]>>;
+    relevantFiles: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    context: z.ZodOptional<z.ZodString>;
+    focusAreas: z.ZodOptional<z.ZodArray<z.ZodEnum<["security", "performance", "architecture", "correctness", "maintainability", "scalability", "testing", "documentation"]>, "many">>;
+    customPrompt: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    workingDir: string;
+    prompt: string;
+    taskType?: "question" | "plan" | "debug" | "explain" | "fix" | "explore" | "general" | undefined;
+    context?: string | undefined;
+    relevantFiles?: string[] | undefined;
+    focusAreas?: ("performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation")[] | undefined;
+    customPrompt?: string | undefined;
+}, {
+    workingDir: string;
+    prompt: string;
+    taskType?: "question" | "plan" | "debug" | "explain" | "fix" | "explore" | "general" | undefined;
+    context?: string | undefined;
+    relevantFiles?: string[] | undefined;
+    focusAreas?: ("performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation")[] | undefined;
+    customPrompt?: string | undefined;
+}>;
+export type PeerInput = z.infer<typeof PeerInputSchema>;
+export declare function getPeerOutputJsonSchema(): object;
+export declare function parsePeerOutput(rawOutput: string): PeerOutput | null;

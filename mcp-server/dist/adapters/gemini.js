@@ -7,8 +7,8 @@
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { registerAdapter, } from './base.js';
-import { parseReviewOutput, parseLegacyMarkdownOutput } from '../schema.js';
-import { buildSimpleHandoff, buildHandoffPrompt, selectRole, } from '../handoff.js';
+import { parseReviewOutput, parseLegacyMarkdownOutput, parsePeerOutput } from '../schema.js';
+import { buildSimpleHandoff, buildHandoffPrompt, buildPeerPrompt, selectRole, } from '../handoff.js';
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
@@ -210,6 +210,92 @@ export class GeminiAdapter {
                 },
                 executionTimeMs: Date.now() - startTime,
             };
+        }
+    }
+    async runPeerRequest(request) {
+        const startTime = Date.now();
+        if (!existsSync(request.workingDir)) {
+            return {
+                success: false,
+                error: { type: 'cli_error', message: `Working directory does not exist: ${request.workingDir}` },
+                suggestion: 'Check that the working directory path is correct',
+                executionTimeMs: Date.now() - startTime,
+            };
+        }
+        return this.runPeerWithRetry(request, 0, startTime);
+    }
+    async runPeerWithRetry(request, attempt, startTime, previousError, previousOutput) {
+        try {
+            let prompt = buildPeerPrompt({
+                workingDir: request.workingDir,
+                prompt: request.prompt,
+                taskType: request.taskType,
+                relevantFiles: request.relevantFiles,
+                context: request.context,
+                focusAreas: request.focusAreas,
+                customInstructions: request.customPrompt,
+                outputFormat: 'json',
+            });
+            if (attempt > 0) {
+                prompt += `\n\n---\n\n# RETRY ATTEMPT ${attempt + 1}\n\n` +
+                    `Previous output had issues: ${previousError}\n` +
+                    `Please fix these issues and provide valid JSON output.\n` +
+                    (previousOutput ? `\nPrevious output (for reference):\n${previousOutput.slice(0, 500)}...` : '');
+            }
+            const result = await this.runCli(prompt, request.workingDir);
+            if (result.exitCode !== 0) {
+                const error = this.categorizeError(result.stderr);
+                return {
+                    success: false, error,
+                    suggestion: this.getSuggestion(error),
+                    rawOutput: result.stderr,
+                    executionTimeMs: Date.now() - startTime,
+                };
+            }
+            if (result.truncated) {
+                return {
+                    success: false,
+                    error: { type: 'cli_error', message: 'Output exceeded maximum buffer size (1MB)' },
+                    suggestion: 'Try a more focused request',
+                    executionTimeMs: Date.now() - startTime,
+                };
+            }
+            const output = parsePeerOutput(result.stdout);
+            if (!output) {
+                if (attempt < MAX_RETRIES) {
+                    return this.runPeerWithRetry(request, attempt + 1, startTime, 'Output did not match expected JSON schema', result.stdout);
+                }
+                return {
+                    success: false,
+                    error: { type: 'parse_error', message: 'Failed to parse peer output after retries',
+                        details: { rawOutput: result.stdout.slice(0, 1000) } },
+                    suggestion: 'The model may not be following the output format.',
+                    rawOutput: result.stdout,
+                    executionTimeMs: Date.now() - startTime,
+                };
+            }
+            return {
+                success: true, output,
+                rawOutput: result.stdout,
+                executionTimeMs: Date.now() - startTime,
+            };
+        }
+        catch (error) {
+            const err = error;
+            if (err.code === 'ENOENT') {
+                return { success: false, error: { type: 'cli_not_found', message: 'Gemini CLI not found' },
+                    suggestion: 'Install with: npm install -g @google/gemini-cli', executionTimeMs: Date.now() - startTime };
+            }
+            if (err.message === 'TIMEOUT') {
+                return { success: false, error: { type: 'timeout', message: 'No output for 10 minutes' },
+                    suggestion: 'Try a simpler request', executionTimeMs: Date.now() - startTime };
+            }
+            if (err.message === 'MAX_TIMEOUT') {
+                return { success: false, error: { type: 'timeout', message: 'Task exceeded 60 minute maximum' },
+                    suggestion: 'Try a smaller scope', executionTimeMs: Date.now() - startTime };
+            }
+            return { success: false, error: { type: 'cli_error', message: err.message },
+                executionTimeMs: Date.now() - startTime };
         }
     }
     runCli(prompt, workingDir) {

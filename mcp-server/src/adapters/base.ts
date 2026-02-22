@@ -6,8 +6,8 @@
  * changing the core orchestration logic.
  */
 
-import { ReviewOutput, ReviewFinding } from '../schema.js';
-import { FocusArea, OutputType, ReasoningEffort } from '../types.js';
+import { ReviewOutput, ReviewFinding, PeerOutput } from '../schema.js';
+import { FocusArea, OutputType, ReasoningEffort, TaskType } from '../types.js';
 
 // =============================================================================
 // REVIEWER CAPABILITIES
@@ -67,6 +67,36 @@ export interface ReviewRequest {
 
   /** Expert role configuration (optional override) */
   expertRole?: ExpertRole;
+}
+
+// =============================================================================
+// PEER REQUEST (General-purpose coworker tasks)
+// =============================================================================
+
+export interface PeerRequest {
+  /** Working directory containing the code */
+  workingDir: string;
+
+  /** The question or request from CC */
+  prompt: string;
+
+  /** Hint about the type of task */
+  taskType?: TaskType;
+
+  /** Files the peer should focus on */
+  relevantFiles?: string[];
+
+  /** Additional context (error messages, prior analysis) */
+  context?: string;
+
+  /** Areas to focus on */
+  focusAreas?: FocusArea[];
+
+  /** Custom instructions from the user */
+  customPrompt?: string;
+
+  /** Reasoning effort level (for models that support it) */
+  reasoningEffort?: ReasoningEffort;
 }
 
 // =============================================================================
@@ -295,6 +325,28 @@ export interface ReviewError {
   details?: Record<string, unknown>;
 }
 
+
+// =============================================================================
+// PEER RESULT
+// =============================================================================
+
+export interface PeerSuccess {
+  success: true;
+  output: PeerOutput;
+  rawOutput?: string;
+  executionTimeMs: number;
+}
+
+export interface PeerFailure {
+  success: false;
+  error: ReviewError;
+  suggestion?: string;
+  rawOutput?: string;
+  executionTimeMs: number;
+}
+
+export type PeerResult = PeerSuccess | PeerFailure;
+
 // =============================================================================
 // REVIEWER ADAPTER INTERFACE
 // =============================================================================
@@ -315,6 +367,9 @@ export interface ReviewerAdapter {
 
   /** Run a review and return structured output */
   runReview(request: ReviewRequest): Promise<ReviewResult>;
+
+  /** Run a general-purpose peer request and return structured output */
+  runPeerRequest(request: PeerRequest): Promise<PeerResult>;
 
   /**
    * Optional: Run peer review of another model's output

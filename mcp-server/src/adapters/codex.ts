@@ -15,14 +15,17 @@ import {
   ReviewRequest,
   ReviewResult,
   ReviewError,
+  PeerRequest,
+  PeerResult,
   registerAdapter,
   EXPERT_ROLES,
 } from './base.js';
-import { ReviewOutput, parseReviewOutput, parseLegacyMarkdownOutput, getReviewOutputJsonSchema } from '../schema.js';
+import { ReviewOutput, parseReviewOutput, parseLegacyMarkdownOutput, getReviewOutputJsonSchema, getPeerOutputJsonSchema, parsePeerOutput } from '../schema.js';
 import { buildReviewPrompt, isValidFeedbackOutput } from '../prompt.js';
 import {
   buildSimpleHandoff,
   buildHandoffPrompt,
+  buildPeerPrompt,
   selectRole,
   FocusArea,
 } from '../handoff.js';
@@ -133,7 +136,7 @@ export class CodexAdapter implements ReviewerAdapter {
       }
 
       // Run the CLI
-      const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high');
+      const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getReviewOutputJsonSchema);
 
       // Handle CLI errors
       if (result.exitCode !== 0) {
@@ -286,10 +289,120 @@ export class CodexAdapter implements ReviewerAdapter {
     }
   }
 
+
+  async runPeerRequest(request: PeerRequest): Promise<PeerResult> {
+    const startTime = Date.now();
+
+    if (!existsSync(request.workingDir)) {
+      return {
+        success: false,
+        error: {
+          type: 'cli_error',
+          message: `Working directory does not exist: ${request.workingDir}`,
+        },
+        suggestion: 'Check that the working directory path is correct',
+        executionTimeMs: Date.now() - startTime,
+      };
+    }
+
+    return this.runPeerWithRetry(request, 0, startTime);
+  }
+
+  private async runPeerWithRetry(
+    request: PeerRequest,
+    attempt: number,
+    startTime: number,
+    previousError?: string,
+    previousOutput?: string
+  ): Promise<PeerResult> {
+    try {
+      let prompt = buildPeerPrompt({
+        workingDir: request.workingDir,
+        prompt: request.prompt,
+        taskType: request.taskType,
+        relevantFiles: request.relevantFiles,
+        context: request.context,
+        focusAreas: request.focusAreas,
+        customInstructions: request.customPrompt,
+        outputFormat: 'json',
+      });
+
+      if (attempt > 0) {
+        prompt += `\n\n---\n\n# RETRY ATTEMPT ${attempt + 1}\n\n` +
+          `Previous output had issues: ${previousError}\n` +
+          `Please fix these issues and provide valid JSON output.\n` +
+          (previousOutput ? `\nPrevious output (for reference):\n${previousOutput.slice(0, 500)}...` : '');
+      }
+
+      const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getPeerOutputJsonSchema);
+
+      if (result.exitCode !== 0) {
+        const error = this.categorizeError(result.stderr);
+        return {
+          success: false,
+          error,
+          suggestion: this.getSuggestion(error),
+          rawOutput: result.stderr,
+          executionTimeMs: Date.now() - startTime,
+        };
+      }
+
+      if (result.truncated) {
+        return {
+          success: false,
+          error: { type: 'cli_error', message: 'Output exceeded maximum buffer size (1MB)' },
+          suggestion: 'Try a more focused request',
+          executionTimeMs: Date.now() - startTime,
+        };
+      }
+
+      const output = parsePeerOutput(result.stdout);
+
+      if (!output) {
+        if (attempt < MAX_RETRIES) {
+          return this.runPeerWithRetry(request, attempt + 1, startTime,
+            'Output did not match expected JSON schema', result.stdout);
+        }
+        return {
+          success: false,
+          error: { type: 'parse_error', message: 'Failed to parse peer output after retries',
+            details: { rawOutput: result.stdout.slice(0, 1000) } },
+          suggestion: 'The model may not be following the output format.',
+          rawOutput: result.stdout,
+          executionTimeMs: Date.now() - startTime,
+        };
+      }
+
+      return {
+        success: true,
+        output,
+        rawOutput: result.stdout,
+        executionTimeMs: Date.now() - startTime,
+      };
+    } catch (error) {
+      const err = error as Error & { code?: string };
+      if (err.code === 'ENOENT') {
+        return { success: false, error: { type: 'cli_not_found', message: 'Codex CLI not found' },
+          suggestion: 'Install with: npm install -g @openai/codex', executionTimeMs: Date.now() - startTime };
+      }
+      if (err.message === 'TIMEOUT') {
+        return { success: false, error: { type: 'timeout', message: 'No output for 2 minutes' },
+          suggestion: 'Try a simpler request', executionTimeMs: Date.now() - startTime };
+      }
+      if (err.message === 'MAX_TIMEOUT') {
+        return { success: false, error: { type: 'timeout', message: 'Task exceeded 60 minute maximum' },
+          suggestion: 'Try a smaller scope', executionTimeMs: Date.now() - startTime };
+      }
+      return { success: false, error: { type: 'cli_error', message: err.message },
+        executionTimeMs: Date.now() - startTime };
+    }
+  }
+
   private runCli(
     prompt: string,
     workingDir: string,
-    reasoningEffort: 'high' | 'xhigh'
+    reasoningEffort: 'high' | 'xhigh',
+    schemaGetter: () => object
   ): Promise<{ stdout: string; stderr: string; exitCode: number; truncated: boolean }> {
     return new Promise((resolve, reject) => {
       // Create temp schema file for structured output
@@ -297,7 +410,7 @@ export class CodexAdapter implements ReviewerAdapter {
       try {
         const tempDir = mkdtempSync(join(tmpdir(), 'codex-schema-'));
         schemaFile = join(tempDir, 'schema.json');
-        const schema = getReviewOutputJsonSchema();
+        const schema = schemaGetter();
         writeFileSync(schemaFile, JSON.stringify(schema, null, 2), 'utf-8');
       } catch (err) {
         console.error('[codex] Warning: Failed to create schema file, continuing without structured output:', err);

@@ -1,57 +1,43 @@
 /**
- * MCP Tool Implementations
+ * MCP Peer Tool Implementations
  *
- * Provides two levels of review:
- * 1. Single model review (codex_review, gemini_review)
- * 2. Multi-model parallel review (multi_review)
+ * General-purpose coworker tools:
+ * 1. ask_codex - Ask Codex for help
+ * 2. ask_gemini - Ask Gemini for help
+ * 3. ask_multi - Ask both in parallel
  */
-import { z } from 'zod';
-export declare const ReviewInputSchema: z.ZodObject<{
-    workingDir: z.ZodString;
-    ccOutput: z.ZodString;
-    outputType: z.ZodEnum<["plan", "findings", "analysis", "proposal"]>;
-    analyzedFiles: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
-    focusAreas: z.ZodOptional<z.ZodArray<z.ZodEnum<["security", "performance", "architecture", "correctness", "maintainability", "scalability", "testing", "documentation"]>, "many">>;
-    customPrompt: z.ZodOptional<z.ZodString>;
-    reasoningEffort: z.ZodOptional<z.ZodEnum<["high", "xhigh"]>>;
-}, "strip", z.ZodTypeAny, {
+import { PeerResult } from '../adapters/index.js';
+export type PeerInput = {
     workingDir: string;
-    ccOutput: string;
-    outputType: "findings" | "analysis" | "plan" | "proposal";
-    focusAreas?: ("performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation")[] | undefined;
-    customPrompt?: string | undefined;
-    analyzedFiles?: string[] | undefined;
-    reasoningEffort?: "high" | "xhigh" | undefined;
-}, {
-    workingDir: string;
-    ccOutput: string;
-    outputType: "findings" | "analysis" | "plan" | "proposal";
-    focusAreas?: ("performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation")[] | undefined;
-    customPrompt?: string | undefined;
-    analyzedFiles?: string[] | undefined;
-    reasoningEffort?: "high" | "xhigh" | undefined;
-}>;
-export type ReviewInput = z.infer<typeof ReviewInputSchema>;
-export declare function handleCodexReview(input: ReviewInput): Promise<{
+    prompt: string;
+    taskType?: string;
+    relevantFiles?: string[];
+    context?: string;
+    focusAreas?: string[];
+    customPrompt?: string;
+    reasoningEffort?: 'high' | 'xhigh';
+};
+export declare function formatPeerResponse(result: PeerResult, modelName: string): string;
+export declare function handleAskCodex(input: PeerInput): Promise<{
     content: Array<{
         type: 'text';
         text: string;
     }>;
 }>;
-export declare function handleGeminiReview(input: ReviewInput): Promise<{
+export declare function handleAskGemini(input: PeerInput): Promise<{
     content: Array<{
         type: 'text';
         text: string;
     }>;
 }>;
-export declare function handleMultiReview(input: ReviewInput): Promise<{
+export declare function handleAskMulti(input: PeerInput): Promise<{
     content: Array<{
         type: 'text';
         text: string;
     }>;
 }>;
-export declare const TOOL_DEFINITIONS: {
-    codex_review: {
+export declare const PEER_TOOL_DEFINITIONS: {
+    ask_codex: {
         name: string;
         description: string;
         inputSchema: {
@@ -61,20 +47,24 @@ export declare const TOOL_DEFINITIONS: {
                     type: string;
                     description: string;
                 };
-                ccOutput: {
+                prompt: {
                     type: string;
                     description: string;
                 };
-                outputType: {
+                taskType: {
                     type: string;
                     enum: string[];
                     description: string;
                 };
-                analyzedFiles: {
+                relevantFiles: {
                     type: string;
                     items: {
                         type: string;
                     };
+                    description: string;
+                };
+                context: {
+                    type: string;
                     description: string;
                 };
                 focusAreas: {
@@ -98,7 +88,7 @@ export declare const TOOL_DEFINITIONS: {
             required: string[];
         };
     };
-    gemini_review: {
+    ask_gemini: {
         name: string;
         description: string;
         inputSchema: {
@@ -108,20 +98,24 @@ export declare const TOOL_DEFINITIONS: {
                     type: string;
                     description: string;
                 };
-                ccOutput: {
+                prompt: {
                     type: string;
                     description: string;
                 };
-                outputType: {
+                taskType: {
                     type: string;
                     enum: string[];
                     description: string;
                 };
-                analyzedFiles: {
+                relevantFiles: {
                     type: string;
                     items: {
                         type: string;
                     };
+                    description: string;
+                };
+                context: {
+                    type: string;
                     description: string;
                 };
                 focusAreas: {
@@ -140,7 +134,7 @@ export declare const TOOL_DEFINITIONS: {
             required: string[];
         };
     };
-    multi_review: {
+    ask_multi: {
         name: string;
         description: string;
         inputSchema: {
@@ -150,20 +144,24 @@ export declare const TOOL_DEFINITIONS: {
                     type: string;
                     description: string;
                 };
-                ccOutput: {
+                prompt: {
                     type: string;
                     description: string;
                 };
-                outputType: {
+                taskType: {
                     type: string;
                     enum: string[];
                     description: string;
                 };
-                analyzedFiles: {
+                relevantFiles: {
                     type: string;
                     items: {
                         type: string;
                     };
+                    description: string;
+                };
+                context: {
+                    type: string;
                     description: string;
                 };
                 focusAreas: {
