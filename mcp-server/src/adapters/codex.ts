@@ -195,24 +195,38 @@ export class CodexAdapter implements ReviewerAdapter {
         };
       }
 
-      // If we used fallback and got minimal data, retry
-      if (usedFallback && attempt < MAX_RETRIES) {
-        const hasMinimalData =
-          output.findings.length === 0 &&
-          output.agreements.length === 0 &&
-          output.disagreements.length === 0 &&
-          output.risk_assessment.summary === 'Unable to parse structured risk assessment';
+      // Check for empty/minimal data on any parse path
+      const hasMinimalData =
+        output.findings.length === 0 &&
+        output.agreements.length === 0 &&
+        output.disagreements.length === 0;
 
-        if (hasMinimalData) {
-          console.error(`[codex] Received incomplete output (fallback parse with no data), retrying...`);
+      if (hasMinimalData) {
+        if (attempt < MAX_RETRIES) {
+          console.error(`[codex] Received empty output, retrying...`);
           return this.runWithRetry(
             request,
             attempt + 1,
             startTime,
-            'Received markdown output instead of JSON. Please provide valid JSON output.',
+            usedFallback
+              ? 'Received markdown output instead of JSON. Please provide valid JSON output.'
+              : 'Output contained no findings, agreements, or disagreements. Please provide substantive review.',
             result.stdout
           );
         }
+
+        // Final attempt with no data — report failure
+        return {
+          success: false,
+          error: {
+            type: 'parse_error',
+            message: 'Reviewer returned empty output after retries',
+            details: { rawOutput: result.stdout.slice(0, 1000) },
+          },
+          suggestion: 'The model returned no substantive review. Try a different focus area.',
+          rawOutput: result.stdout,
+          executionTimeMs: Date.now() - startTime,
+        };
       }
 
       return {
@@ -313,6 +327,12 @@ export class CodexAdapter implements ReviewerAdapter {
         cwd: workingDir,
         stdio: ['pipe', 'pipe', 'pipe'],  // stdin is pipe for prompt delivery
         env: { ...process.env }
+      });
+
+      // Guard against EPIPE if the child exits before consuming stdin.
+      // Log but don't reject — let the `close` handler capture the real exit code.
+      proc.stdin.on('error', (err) => {
+        console.error(`[codex] stdin error (likely EPIPE): ${err.message}`);
       });
 
       // Deliver prompt via stdin

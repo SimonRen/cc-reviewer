@@ -200,6 +200,37 @@ export declare const RiskAssessment: z.ZodObject<{
     mitigations?: string[] | undefined;
 }>;
 export type RiskAssessment = z.infer<typeof RiskAssessment>;
+export declare const UncertaintyResponse: z.ZodObject<{
+    uncertainty_index: z.ZodNumber;
+    verified: z.ZodBoolean;
+    finding: z.ZodString;
+    recommendation: z.ZodOptional<z.ZodString>;
+}, "strip", z.ZodTypeAny, {
+    verified: boolean;
+    uncertainty_index: number;
+    finding: string;
+    recommendation?: string | undefined;
+}, {
+    verified: boolean;
+    uncertainty_index: number;
+    finding: string;
+    recommendation?: string | undefined;
+}>;
+export type UncertaintyResponse = z.infer<typeof UncertaintyResponse>;
+export declare const QuestionAnswer: z.ZodObject<{
+    question_index: z.ZodNumber;
+    answer: z.ZodString;
+    confidence: z.ZodOptional<z.ZodNumber>;
+}, "strip", z.ZodTypeAny, {
+    question_index: number;
+    answer: string;
+    confidence?: number | undefined;
+}, {
+    question_index: number;
+    answer: string;
+    confidence?: number | undefined;
+}>;
+export type QuestionAnswer = z.infer<typeof QuestionAnswer>;
 export declare const ReviewOutput: z.ZodObject<{
     reviewer: z.ZodString;
     timestamp: z.ZodOptional<z.ZodString>;
@@ -348,6 +379,35 @@ export declare const ReviewOutput: z.ZodObject<{
         alternative: string;
         recommendation: "strongly_prefer" | "consider" | "situational" | "informational";
     }>, "many">;
+    uncertainty_responses: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        uncertainty_index: z.ZodNumber;
+        verified: z.ZodBoolean;
+        finding: z.ZodString;
+        recommendation: z.ZodOptional<z.ZodString>;
+    }, "strip", z.ZodTypeAny, {
+        verified: boolean;
+        uncertainty_index: number;
+        finding: string;
+        recommendation?: string | undefined;
+    }, {
+        verified: boolean;
+        uncertainty_index: number;
+        finding: string;
+        recommendation?: string | undefined;
+    }>, "many">>;
+    question_answers: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        question_index: z.ZodNumber;
+        answer: z.ZodString;
+        confidence: z.ZodOptional<z.ZodNumber>;
+    }, "strip", z.ZodTypeAny, {
+        question_index: number;
+        answer: string;
+        confidence?: number | undefined;
+    }, {
+        question_index: number;
+        answer: string;
+        confidence?: number | undefined;
+    }>, "many">>;
     risk_assessment: z.ZodObject<{
         overall_level: z.ZodEnum<["critical", "high", "medium", "low", "minimal"]>;
         score: z.ZodNumber;
@@ -424,6 +484,17 @@ export declare const ReviewOutput: z.ZodObject<{
         mitigations?: string[] | undefined;
     };
     timestamp?: string | undefined;
+    uncertainty_responses?: {
+        verified: boolean;
+        uncertainty_index: number;
+        finding: string;
+        recommendation?: string | undefined;
+    }[] | undefined;
+    question_answers?: {
+        question_index: number;
+        answer: string;
+        confidence?: number | undefined;
+    }[] | undefined;
     files_examined?: string[] | undefined;
     execution_notes?: string | undefined;
 }, {
@@ -481,6 +552,17 @@ export declare const ReviewOutput: z.ZodObject<{
         mitigations?: string[] | undefined;
     };
     timestamp?: string | undefined;
+    uncertainty_responses?: {
+        verified: boolean;
+        uncertainty_index: number;
+        finding: string;
+        recommendation?: string | undefined;
+    }[] | undefined;
+    question_answers?: {
+        question_index: number;
+        answer: string;
+        confidence?: number | undefined;
+    }[] | undefined;
     files_examined?: string[] | undefined;
     execution_notes?: string | undefined;
 }>;

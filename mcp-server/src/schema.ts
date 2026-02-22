@@ -125,6 +125,25 @@ export const RiskAssessment = z.object({
 export type RiskAssessment = z.infer<typeof RiskAssessment>;
 
 // =============================================================================
+// UNCERTAINTY & QUESTION RESPONSES
+// =============================================================================
+
+export const UncertaintyResponse = z.object({
+  uncertainty_index: z.number().int().positive().describe('1-based index of the uncertainty being addressed'),
+  verified: z.boolean().describe('Whether the uncertainty was verified'),
+  finding: z.string().describe('What the reviewer found'),
+  recommendation: z.string().optional().describe('What CC should do'),
+});
+export type UncertaintyResponse = z.infer<typeof UncertaintyResponse>;
+
+export const QuestionAnswer = z.object({
+  question_index: z.number().int().positive().describe('1-based index of the question being answered'),
+  answer: z.string().describe('The reviewer answer'),
+  confidence: ConfidenceScore.optional().describe('Confidence in the answer (0-1)'),
+});
+export type QuestionAnswer = z.infer<typeof QuestionAnswer>;
+
+// =============================================================================
 // COMPLETE REVIEW OUTPUT (Single Reviewer)
 // =============================================================================
 
@@ -137,6 +156,10 @@ export const ReviewOutput = z.object({
   agreements: z.array(Agreement).describe("Validation of CC's correct assessments"),
   disagreements: z.array(Disagreement).describe("Challenges to CC's claims"),
   alternatives: z.array(Alternative).describe('Alternative approaches to consider'),
+
+  // Responses to CC's uncertainties and questions
+  uncertainty_responses: z.array(UncertaintyResponse).optional().describe('Responses to CC uncertainties'),
+  question_answers: z.array(QuestionAnswer).optional().describe('Answers to CC questions'),
 
   // Summary
   risk_assessment: RiskAssessment,
@@ -254,6 +277,33 @@ export function getReviewOutputJsonSchema(): object {
           }
         }
       },
+      uncertainty_responses: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['uncertainty_index', 'verified', 'finding'],
+          properties: {
+            uncertainty_index: { type: 'integer', minimum: 1 },
+            verified: { type: 'boolean' },
+            finding: { type: 'string' },
+            recommendation: { type: 'string' }
+          }
+        }
+      },
+      question_answers: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['question_index', 'answer'],
+          properties: {
+            question_index: { type: 'integer', minimum: 1 },
+            answer: { type: 'string' },
+            confidence: { type: 'number', minimum: 0, maximum: 1 }
+          }
+        }
+      },
       risk_assessment: {
         type: 'object',
         additionalProperties: false,
@@ -298,6 +348,14 @@ function normalizeReviewOutput(parsed: Record<string, unknown>): Record<string, 
   normalized.disagreements = normalized.disagreements ?? [];
   normalized.alternatives = normalized.alternatives ?? [];
   normalized.findings = normalized.findings ?? [];
+
+  // Normalize optional response arrays — drop non-array values
+  if (normalized.uncertainty_responses !== undefined && !Array.isArray(normalized.uncertainty_responses)) {
+    delete normalized.uncertainty_responses;
+  }
+  if (normalized.question_answers !== undefined && !Array.isArray(normalized.question_answers)) {
+    delete normalized.question_answers;
+  }
 
   // Normalize risk_assessment from simplified formats
   if (!normalized.risk_assessment) {

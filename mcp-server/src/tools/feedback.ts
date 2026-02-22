@@ -98,6 +98,29 @@ function formatSingleReviewResponse(result: ReviewResult, modelName: string): st
     }
   }
 
+  // Uncertainty Responses
+  if (output.uncertainty_responses && output.uncertainty_responses.length > 0) {
+    lines.push(`### Uncertainty Responses (${output.uncertainty_responses.length})\n`);
+    for (const ur of output.uncertainty_responses) {
+      const icon = ur.verified ? '✓' : '✗';
+      lines.push(`${icon} **Uncertainty #${ur.uncertainty_index}**: ${ur.finding}`);
+      if (ur.recommendation) {
+        lines.push(`  → ${ur.recommendation}`);
+      }
+      lines.push('');
+    }
+  }
+
+  // Question Answers
+  if (output.question_answers && output.question_answers.length > 0) {
+    lines.push(`### Question Answers (${output.question_answers.length})\n`);
+    for (const qa of output.question_answers) {
+      const confidence = qa.confidence !== undefined ? ` [${Math.round(qa.confidence * 100)}%]` : '';
+      lines.push(`**Q${qa.question_index}**${confidence}: ${qa.answer}`);
+      lines.push('');
+    }
+  }
+
   // Agreements
   if (output.agreements.length > 0) {
     lines.push(`### Agreements (${output.agreements.length})\n`);

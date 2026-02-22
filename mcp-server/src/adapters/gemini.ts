@@ -193,14 +193,14 @@ export class GeminiAdapter implements ReviewerAdapter {
         };
       }
 
-      // If output has no substantive data, retry regardless of parse path
-      if (attempt < MAX_RETRIES) {
-        const hasMinimalData =
-          output.findings.length === 0 &&
-          output.agreements.length === 0 &&
-          output.disagreements.length === 0;
+      // If output has no substantive data, retry or fail
+      const hasMinimalData =
+        output.findings.length === 0 &&
+        output.agreements.length === 0 &&
+        output.disagreements.length === 0;
 
-        if (hasMinimalData) {
+      if (hasMinimalData) {
+        if (attempt < MAX_RETRIES) {
           console.error(`[gemini] Received empty output, retrying...`);
           return this.runWithRetry(
             request,
@@ -212,6 +212,19 @@ export class GeminiAdapter implements ReviewerAdapter {
             result.stdout
           );
         }
+
+        // Final attempt with no data — report failure
+        return {
+          success: false,
+          error: {
+            type: 'parse_error',
+            message: 'Reviewer returned empty output after retries',
+            details: { rawOutput: result.stdout.slice(0, 1000) },
+          },
+          suggestion: 'The model returned no substantive review. Try a different focus area.',
+          rawOutput: result.stdout,
+          executionTimeMs: Date.now() - startTime,
+        };
       }
 
       return {
@@ -283,12 +296,19 @@ export class GeminiAdapter implements ReviewerAdapter {
         '--yolo',
         '--output-format', 'json',  // Force JSON output
         '--include-directories', workingDir,
+        '-p', '',                    // Force headless mode; actual prompt delivered via stdin
       ];
 
       const proc = spawn('gemini', args, {
         cwd: workingDir,
         stdio: ['pipe', 'pipe', 'pipe'],  // stdin is pipe for prompt delivery
         env: { ...process.env }
+      });
+
+      // Guard against EPIPE if the child exits before consuming stdin.
+      // Log but don't reject — let the `close` handler capture the real exit code.
+      proc.stdin.on('error', (err) => {
+        console.error(`[gemini] stdin error (likely EPIPE): ${err.message}`);
       });
 
       // Deliver prompt via stdin — more stable than args for complex content

@@ -8,6 +8,8 @@ import {
   ReviewFinding,
   CodeLocation,
   ReviewOutput,
+  UncertaintyResponse,
+  QuestionAnswer,
   getReviewOutputJsonSchema,
   parseReviewOutput,
 } from '../schema.js';
@@ -194,5 +196,161 @@ That's all.`;
     expect(parseReviewOutput(JSON.stringify(invalid))).toBeNull();
     // Arrays should also fail
     expect(parseReviewOutput(JSON.stringify([1, 2, 3]))).toBeNull();
+  });
+
+  it('should preserve uncertainty_responses when present', () => {
+    const withResponses = {
+      ...validOutput,
+      uncertainty_responses: [
+        { uncertainty_index: 1, verified: true, finding: 'Confirmed safe' },
+      ],
+    };
+    const result = parseReviewOutput(JSON.stringify(withResponses));
+    expect(result).not.toBeNull();
+    expect(result!.uncertainty_responses).toHaveLength(1);
+    expect(result!.uncertainty_responses![0].verified).toBe(true);
+  });
+
+  it('should preserve question_answers when present', () => {
+    const withAnswers = {
+      ...validOutput,
+      question_answers: [
+        { question_index: 1, answer: 'Yes, it is thread-safe', confidence: 0.9 },
+      ],
+    };
+    const result = parseReviewOutput(JSON.stringify(withAnswers));
+    expect(result).not.toBeNull();
+    expect(result!.question_answers).toHaveLength(1);
+    expect(result!.question_answers![0].answer).toBe('Yes, it is thread-safe');
+  });
+
+  it('should omit optional fields when absent', () => {
+    const result = parseReviewOutput(JSON.stringify(validOutput));
+    expect(result).not.toBeNull();
+    expect(result!.uncertainty_responses).toBeUndefined();
+    expect(result!.question_answers).toBeUndefined();
+  });
+
+  it('should normalize non-array uncertainty_responses to undefined', () => {
+    const withBadField = {
+      ...validOutput,
+      uncertainty_responses: 'not an array',
+    };
+    const result = parseReviewOutput(JSON.stringify(withBadField));
+    expect(result).not.toBeNull();
+    expect(result!.uncertainty_responses).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// UNCERTAINTY RESPONSE & QUESTION ANSWER SCHEMA TESTS
+// =============================================================================
+
+describe('UncertaintyResponse Schema', () => {
+  it('should accept valid response', () => {
+    const result = UncertaintyResponse.safeParse({
+      uncertainty_index: 1,
+      verified: true,
+      finding: 'The race condition exists as suspected',
+      recommendation: 'Add mutex lock',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept response without optional recommendation', () => {
+    const result = UncertaintyResponse.safeParse({
+      uncertainty_index: 2,
+      verified: false,
+      finding: 'Could not reproduce',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject missing required fields', () => {
+    expect(UncertaintyResponse.safeParse({ uncertainty_index: 1 }).success).toBe(false);
+    expect(UncertaintyResponse.safeParse({ verified: true }).success).toBe(false);
+    expect(UncertaintyResponse.safeParse({ finding: 'test' }).success).toBe(false);
+  });
+
+  it('should reject non-positive index', () => {
+    const result = UncertaintyResponse.safeParse({
+      uncertainty_index: 0,
+      verified: true,
+      finding: 'test',
+    });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe('QuestionAnswer Schema', () => {
+  it('should accept valid answer with confidence', () => {
+    const result = QuestionAnswer.safeParse({
+      question_index: 1,
+      answer: 'Yes, it handles edge cases',
+      confidence: 0.85,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should accept answer without optional confidence', () => {
+    const result = QuestionAnswer.safeParse({
+      question_index: 3,
+      answer: 'The function is not thread-safe',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('should reject missing required fields', () => {
+    expect(QuestionAnswer.safeParse({ question_index: 1 }).success).toBe(false);
+    expect(QuestionAnswer.safeParse({ answer: 'test' }).success).toBe(false);
+  });
+
+  it('should reject confidence out of range', () => {
+    expect(QuestionAnswer.safeParse({
+      question_index: 1,
+      answer: 'test',
+      confidence: 1.5,
+    }).success).toBe(false);
+
+    expect(QuestionAnswer.safeParse({
+      question_index: 1,
+      answer: 'test',
+      confidence: -0.1,
+    }).success).toBe(false);
+  });
+});
+
+// =============================================================================
+// JSON SCHEMA - NEW FIELDS TESTS
+// =============================================================================
+
+describe('JSON Schema - New Fields', () => {
+  it('should include uncertainty_responses as non-required', () => {
+    const schema = getReviewOutputJsonSchema() as any;
+    expect(schema.properties.uncertainty_responses).toBeDefined();
+    expect(schema.required).not.toContain('uncertainty_responses');
+  });
+
+  it('should include question_answers as non-required', () => {
+    const schema = getReviewOutputJsonSchema() as any;
+    expect(schema.properties.question_answers).toBeDefined();
+    expect(schema.required).not.toContain('question_answers');
+  });
+
+  it('should have correct structure for uncertainty_responses items', () => {
+    const schema = getReviewOutputJsonSchema() as any;
+    const itemProps = schema.properties.uncertainty_responses.items.properties;
+    expect(itemProps.uncertainty_index).toBeDefined();
+    expect(itemProps.verified).toBeDefined();
+    expect(itemProps.finding).toBeDefined();
+    expect(itemProps.recommendation).toBeDefined();
+  });
+
+  it('should have correct structure for question_answers items', () => {
+    const schema = getReviewOutputJsonSchema() as any;
+    const itemProps = schema.properties.question_answers.items.properties;
+    expect(itemProps.question_index).toBeDefined();
+    expect(itemProps.answer).toBeDefined();
+    expect(itemProps.confidence).toBeDefined();
   });
 });
