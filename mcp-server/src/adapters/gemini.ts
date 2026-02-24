@@ -401,6 +401,7 @@ export class GeminiAdapter implements ReviewerAdapter {
       // backticks, JSON templates, etc.
       const args = [
         '--yolo',
+        '--model', 'gemini-3.1-pro-preview',
         '--output-format', 'json',  // Force JSON output
         '--include-directories', workingDir,
         '-p', '',                    // Force headless mode; actual prompt delivered via stdin

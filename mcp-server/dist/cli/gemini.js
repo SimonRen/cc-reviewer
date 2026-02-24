@@ -177,6 +177,7 @@ function runGeminiCli(prompt, workingDir) {
         // Use positional prompt (not deprecated -p flag) and --yolo for auto-approval
         const args = [
             '--yolo',
+            '--model', 'gemini-3.1-pro-preview',
             '--include-directories', workingDir,
             prompt
         ];
