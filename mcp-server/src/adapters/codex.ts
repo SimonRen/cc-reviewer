@@ -424,6 +424,7 @@ export class CodexAdapter implements ReviewerAdapter {
         '-c', 'model_reasoning_summary_format=experimental',
         '--dangerously-bypass-approvals-and-sandbox',
         '--skip-git-repo-check',
+        '--search',
         '-C', workingDir,
       ];
 
