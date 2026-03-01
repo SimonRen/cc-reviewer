@@ -320,13 +320,13 @@ export class CodexAdapter {
                 schemaFile = null;
             }
             const args = [
+                '--search',
                 'exec',
                 '-m', 'gpt-5.3-codex',
                 '-c', `model_reasoning_effort=${reasoningEffort}`,
                 '-c', 'model_reasoning_summary_format=experimental',
                 '--dangerously-bypass-approvals-and-sandbox',
                 '--skip-git-repo-check',
-                '--search',
                 '-C', workingDir,
             ];
             // Add schema enforcement if available
