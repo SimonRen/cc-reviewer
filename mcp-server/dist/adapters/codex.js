@@ -328,7 +328,7 @@ export class CodexAdapter {
             }
             const args = [
                 'exec',
-                '-m', 'gpt-5.3-codex',
+                '-m', 'gpt-5.4',
                 '-c', `model_reasoning_effort=${reasoningEffort}`,
                 '-c', 'model_reasoning_summary_format=experimental',
                 '--dangerously-bypass-approvals-and-sandbox',
