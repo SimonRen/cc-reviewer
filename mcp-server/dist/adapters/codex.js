@@ -76,10 +76,11 @@ export class CodexAdapter {
             // Select role based on focus areas
             const role = selectRole(request.focusAreas);
             // Build prompt with retry context if needed
+            // Use 'schema-enforced' since Codex gets --output-schema flag (avoids redundant inline JSON template)
             let prompt = buildHandoffPrompt({
                 handoff,
                 role,
-                outputFormat: 'json',
+                outputFormat: 'schema-enforced',
             });
             // Add retry context if this is a retry attempt
             if (attempt > 0) {
@@ -139,9 +140,14 @@ export class CodexAdapter {
                 };
             }
             // Check for empty/minimal data on any parse path
+            // A valid review may have findings, agreements, disagreements, alternatives,
+            // or a non-default risk assessment. Only retry if truly empty across all fields.
             const hasMinimalData = output.findings.length === 0 &&
                 output.agreements.length === 0 &&
-                output.disagreements.length === 0;
+                output.disagreements.length === 0 &&
+                output.alternatives.length === 0 &&
+                output.risk_assessment.overall_level === 'medium' &&
+                output.risk_assessment.score === 50;
             if (hasMinimalData) {
                 if (attempt < MAX_RETRIES) {
                     console.error(`[codex] Received empty output, retrying...`);
@@ -231,6 +237,7 @@ export class CodexAdapter {
     }
     async runPeerWithRetry(request, attempt, startTime, previousError, previousOutput) {
         try {
+            // Use 'schema-enforced' since Codex gets --output-schema flag (avoids redundant inline JSON template)
             let prompt = buildPeerPrompt({
                 workingDir: request.workingDir,
                 prompt: request.prompt,
@@ -239,7 +246,7 @@ export class CodexAdapter {
                 context: request.context,
                 focusAreas: request.focusAreas,
                 customInstructions: request.customPrompt,
-                outputFormat: 'json',
+                outputFormat: 'schema-enforced',
             });
             if (attempt > 0) {
                 prompt += `\n\n---\n\n# RETRY ATTEMPT ${attempt + 1}\n\n` +
@@ -320,7 +327,6 @@ export class CodexAdapter {
                 schemaFile = null;
             }
             const args = [
-                '--search',
                 'exec',
                 '-m', 'gpt-5.3-codex',
                 '-c', `model_reasoning_effort=${reasoningEffort}`,

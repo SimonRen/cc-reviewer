@@ -197,10 +197,15 @@ export class GeminiAdapter implements ReviewerAdapter {
       }
 
       // If output has no substantive data, retry or fail
+      // A valid review may have findings, agreements, disagreements, alternatives,
+      // or a non-default risk assessment. Only retry if truly empty across all fields.
       const hasMinimalData =
         output.findings.length === 0 &&
         output.agreements.length === 0 &&
-        output.disagreements.length === 0;
+        output.disagreements.length === 0 &&
+        output.alternatives.length === 0 &&
+        output.risk_assessment.overall_level === 'medium' &&
+        output.risk_assessment.score === 50;
 
       if (hasMinimalData) {
         if (attempt < MAX_RETRIES) {

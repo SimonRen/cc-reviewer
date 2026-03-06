@@ -318,7 +318,7 @@ export function selectRole(focusAreas?: FocusArea[]): ReviewerRole {
 export interface PromptOptions {
   handoff: Handoff;
   role?: ReviewerRole;
-  outputFormat: 'json' | 'markdown';
+  outputFormat: 'json' | 'markdown' | 'schema-enforced';
 }
 
 /**
@@ -437,7 +437,22 @@ ${handoff.priorityFiles.map(f => `- \`${f}\``).join('\n')}`);
   // ==========================================================================
   // SECTION 7: OUTPUT FORMAT
   // ==========================================================================
-  if (outputFormat === 'json') {
+  if (outputFormat === 'schema-enforced') {
+    // Schema is enforced externally (e.g. via --output-schema flag).
+    // Only include behavioral rules, skip the redundant JSON template.
+    sections.push(`
+---
+
+# OUTPUT FORMAT
+
+Respond with valid JSON matching the provided output schema.
+
+**Rules:**
+- Use \`git diff\` and file reading to verify before claiming issues
+- Include evidence (code snippets) for findings
+- Confidence reflects how sure YOU are (not CC)
+- Answer CC's uncertainties and questions explicitly`);
+  } else if (outputFormat === 'json') {
     sections.push(`
 ---
 
@@ -568,7 +583,7 @@ export interface PeerPromptOptions {
   context?: string;
   focusAreas?: FocusArea[];
   customInstructions?: string;
-  outputFormat: 'json';
+  outputFormat: 'json' | 'schema-enforced';
 }
 
 /**
@@ -576,7 +591,7 @@ export interface PeerPromptOptions {
  * The peer acts as a collaborative coworker, not a critic.
  */
 export function buildPeerPrompt(options: PeerPromptOptions): string {
-  const { workingDir, prompt, taskType, relevantFiles, context, focusAreas, customInstructions } = options;
+  const { workingDir, prompt, taskType, relevantFiles, context, focusAreas, customInstructions, outputFormat } = options;
 
   // Select role based on focus areas (reuse existing role selection)
   const role = selectRole(focusAreas);
@@ -653,7 +668,24 @@ ${customInstructions}`);
 6. Suggest concrete next steps`);
 
   // SECTION 7: OUTPUT FORMAT
-  sections.push(`
+  if (outputFormat === 'schema-enforced') {
+    // Schema is enforced externally (e.g. via --output-schema flag).
+    // Only include behavioral rules, skip the redundant JSON template.
+    sections.push(`
+---
+
+# OUTPUT FORMAT
+
+Respond with valid JSON matching the provided output schema.
+
+**Rules:**
+- Read files before making claims
+- Reference specific file paths and line numbers
+- Be concrete and actionable — no vague suggestions
+- Confidence reflects how sure YOU are about your answer
+- Include alternatives when there are meaningful tradeoffs`);
+  } else {
+    sections.push(`
 ---
 
 # OUTPUT FORMAT
@@ -700,6 +732,7 @@ Respond with valid JSON:
 - Be concrete and actionable — no vague suggestions
 - Confidence reflects how sure YOU are about your answer
 - Include alternatives when there are meaningful tradeoffs`);
+  }
 
   return sections.join('\n');
 }

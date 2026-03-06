@@ -215,7 +215,7 @@ export declare function selectRole(focusAreas?: FocusArea[]): ReviewerRole;
 export interface PromptOptions {
     handoff: Handoff;
     role?: ReviewerRole;
-    outputFormat: 'json' | 'markdown';
+    outputFormat: 'json' | 'markdown' | 'schema-enforced';
 }
 /**
  * Build the review prompt using minimal, targeted context
@@ -238,7 +238,7 @@ export interface PeerPromptOptions {
     context?: string;
     focusAreas?: FocusArea[];
     customInstructions?: string;
-    outputFormat: 'json';
+    outputFormat: 'json' | 'schema-enforced';
 }
 /**
  * Build a prompt for general-purpose peer assistance (not review).
