@@ -137,7 +137,7 @@ export class CodexAdapter implements ReviewerAdapter {
       }
 
       // Run the CLI
-      const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getReviewOutputJsonSchema);
+      const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getReviewOutputJsonSchema, request.serviceTier);
 
       // Handle CLI errors
       if (result.exitCode !== 0) {
@@ -341,7 +341,7 @@ export class CodexAdapter implements ReviewerAdapter {
           (previousOutput ? `\nPrevious output (for reference):\n${previousOutput.slice(0, 500)}...` : '');
       }
 
-      const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getPeerOutputJsonSchema);
+      const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getPeerOutputJsonSchema, request.serviceTier);
 
       if (result.exitCode !== 0) {
         const error = this.categorizeError(result.stderr);
@@ -409,7 +409,8 @@ export class CodexAdapter implements ReviewerAdapter {
     prompt: string,
     workingDir: string,
     reasoningEffort: 'high' | 'xhigh',
-    schemaGetter: () => object
+    schemaGetter: () => object,
+    serviceTier?: string
   ): Promise<{ stdout: string; stderr: string; exitCode: number; truncated: boolean }> {
     return new Promise((resolve, reject) => {
       // Create temp schema file for structured output
@@ -433,6 +434,11 @@ export class CodexAdapter implements ReviewerAdapter {
         '--skip-git-repo-check',
         '-C', workingDir,
       ];
+
+      // Add service tier if specified (priority = fast mode, flex = cheap mode)
+      if (serviceTier && serviceTier !== 'default') {
+        args.push('-c', `service_tier=${serviceTier}`);
+      }
 
       // Add schema enforcement if available
       if (schemaFile) {
@@ -468,7 +474,8 @@ export class CodexAdapter implements ReviewerAdapter {
       let dataChunks = 0;
 
       // Show initial progress message
-      console.error(`[codex] Running review with ${reasoningEffort} reasoning...`);
+      const tierLabel = serviceTier && serviceTier !== 'default' ? ` [${serviceTier}]` : '';
+      console.error(`[codex] Running review with ${reasoningEffort} reasoning${tierLabel}...`);
 
       const maxTimer = setTimeout(() => {
         proc.kill('SIGTERM');

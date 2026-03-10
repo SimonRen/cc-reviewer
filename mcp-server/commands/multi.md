@@ -41,9 +41,15 @@ Call `multi_review` with:
   "workingDir": "<current directory>",
   "ccOutput": "<structured handoff>",
   "outputType": "analysis",
-  "focusAreas": ["<from $ARGUMENTS>"]
+  "focusAreas": ["<from $ARGUMENTS>"],
+  "serviceTier": "<see below>"
 }
 ```
+
+### Service Tier (from $ARGUMENTS, applies to Codex only)
+- If user says "fast mode", "fast", or "priority" → set `serviceTier: "priority"`
+- If user says "flex", "cheap", or "budget" → set `serviceTier: "flex"`
+- Otherwise → omit `serviceTier`
 
 ### Structure your ccOutput:
 

@@ -20,6 +20,7 @@ function toPeerRequest(input) {
         focusAreas: input.focusAreas,
         customPrompt: input.customPrompt,
         reasoningEffort: input.reasoningEffort,
+        serviceTier: input.serviceTier,
     };
 }
 export function formatPeerResponse(result, modelName) {
@@ -241,6 +242,11 @@ export const PEER_TOOL_DEFINITIONS = {
                     enum: ['high', 'xhigh'],
                     description: 'Codex reasoning effort (default: high)',
                 },
+                serviceTier: {
+                    type: 'string',
+                    enum: ['default', 'priority', 'flex'],
+                    description: 'Codex service tier (priority = fast mode, flex = cheaper/slower)',
+                },
             },
             required: ['workingDir', 'prompt'],
         },
@@ -328,6 +334,11 @@ export const PEER_TOOL_DEFINITIONS = {
                 customPrompt: {
                     type: 'string',
                     description: 'Additional instructions for the peer',
+                },
+                serviceTier: {
+                    type: 'string',
+                    enum: ['default', 'priority', 'flex'],
+                    description: 'Codex service tier (priority = fast mode, flex = cheaper/slower). Only applies to Codex.',
                 },
             },
             required: ['workingDir', 'prompt'],

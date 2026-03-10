@@ -7,7 +7,7 @@
  */
 
 import { ReviewOutput, ReviewFinding, PeerOutput } from '../schema.js';
-import { FocusArea, OutputType, ReasoningEffort, TaskType } from '../types.js';
+import { FocusArea, OutputType, ReasoningEffort, ServiceTier, TaskType } from '../types.js';
 
 // =============================================================================
 // REVIEWER CAPABILITIES
@@ -65,6 +65,9 @@ export interface ReviewRequest {
   /** Reasoning effort level (for models that support it) */
   reasoningEffort?: ReasoningEffort;
 
+  /** Service tier (for models that support it: priority = fast, flex = cheap) */
+  serviceTier?: ServiceTier;
+
   /** Expert role configuration (optional override) */
   expertRole?: ExpertRole;
 }
@@ -97,6 +100,9 @@ export interface PeerRequest {
 
   /** Reasoning effort level (for models that support it) */
   reasoningEffort?: ReasoningEffort;
+
+  /** Service tier (for models that support it: priority = fast, flex = cheap) */
+  serviceTier?: ServiceTier;
 }
 
 // =============================================================================

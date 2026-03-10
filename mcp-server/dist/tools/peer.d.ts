@@ -16,6 +16,7 @@ export type PeerInput = {
     focusAreas?: string[];
     customPrompt?: string;
     reasoningEffort?: 'high' | 'xhigh';
+    serviceTier?: 'default' | 'priority' | 'flex';
 };
 export declare function formatPeerResponse(result: PeerResult, modelName: string): string;
 export declare function handleAskCodex(input: PeerInput): Promise<{
@@ -80,6 +81,11 @@ export declare const PEER_TOOL_DEFINITIONS: {
                     description: string;
                 };
                 reasoningEffort: {
+                    type: string;
+                    enum: string[];
+                    description: string;
+                };
+                serviceTier: {
                     type: string;
                     enum: string[];
                     description: string;
@@ -174,6 +180,11 @@ export declare const PEER_TOOL_DEFINITIONS: {
                 };
                 customPrompt: {
                     type: string;
+                    description: string;
+                };
+                serviceTier: {
+                    type: string;
+                    enum: string[];
                     description: string;
                 };
             };

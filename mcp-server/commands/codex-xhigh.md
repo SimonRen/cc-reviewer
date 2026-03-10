@@ -18,6 +18,7 @@ Use the `codex_review` MCP tool with `reasoningEffort: "xhigh"` for deeper analy
    - `workingDir`: current working directory
    - `ccOutput`: brief summary of recent changes or context
    - `reasoningEffort`: "xhigh" (this is the key difference from /codex)
+   - `serviceTier`: if user says "fast mode"/"fast"/"priority" → "priority"; if "flex"/"cheap"/"budget" → "flex"; otherwise omit
    - `focus`: extracted from $ARGUMENTS if it's a known focus area
    - `customInstructions`: $ARGUMENTS if it's custom text
 

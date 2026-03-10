@@ -20,7 +20,8 @@ export const ReviewInputSchema = z.object({
         'maintainability', 'scalability', 'testing', 'documentation'
     ])).optional().describe('Areas to focus the review on'),
     customPrompt: z.string().optional().describe('Custom instructions for the reviewer'),
-    reasoningEffort: z.enum(['high', 'xhigh']).optional().describe('Codex reasoning effort level (default: high, use xhigh for deeper analysis)')
+    reasoningEffort: z.enum(['high', 'xhigh']).optional().describe('Codex reasoning effort level (default: high, use xhigh for deeper analysis)'),
+    serviceTier: z.enum(['default', 'priority', 'flex']).optional().describe('Codex service tier (default: default, priority = fast mode, flex = cheaper/slower)')
 });
 // =============================================================================
 // HELPER FUNCTIONS
@@ -34,6 +35,7 @@ function toReviewRequest(input) {
         focusAreas: input.focusAreas,
         customPrompt: input.customPrompt,
         reasoningEffort: input.reasoningEffort,
+        serviceTier: input.serviceTier,
     };
 }
 function formatSingleReviewResponse(result, modelName) {
@@ -338,6 +340,11 @@ export const TOOL_DEFINITIONS = {
                     type: 'string',
                     enum: ['high', 'xhigh'],
                     description: 'Codex reasoning effort (default: high, use xhigh for deeper analysis)'
+                },
+                serviceTier: {
+                    type: 'string',
+                    enum: ['default', 'priority', 'flex'],
+                    description: 'Codex service tier (priority = fast mode, flex = cheaper/slower)'
                 }
             },
             required: ['workingDir', 'ccOutput', 'outputType']
@@ -418,6 +425,11 @@ export const TOOL_DEFINITIONS = {
                 customPrompt: {
                     type: 'string',
                     description: 'Custom instructions for the reviewer'
+                },
+                serviceTier: {
+                    type: 'string',
+                    enum: ['default', 'priority', 'flex'],
+                    description: 'Codex service tier (priority = fast mode, flex = cheaper/slower). Only applies to Codex.'
                 }
             },
             required: ['workingDir', 'ccOutput', 'outputType']

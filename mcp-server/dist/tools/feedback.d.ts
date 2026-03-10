@@ -14,6 +14,7 @@ export declare const ReviewInputSchema: z.ZodObject<{
     focusAreas: z.ZodOptional<z.ZodArray<z.ZodEnum<["security", "performance", "architecture", "correctness", "maintainability", "scalability", "testing", "documentation"]>, "many">>;
     customPrompt: z.ZodOptional<z.ZodString>;
     reasoningEffort: z.ZodOptional<z.ZodEnum<["high", "xhigh"]>>;
+    serviceTier: z.ZodOptional<z.ZodEnum<["default", "priority", "flex"]>>;
 }, "strip", z.ZodTypeAny, {
     workingDir: string;
     ccOutput: string;
@@ -22,6 +23,7 @@ export declare const ReviewInputSchema: z.ZodObject<{
     customPrompt?: string | undefined;
     analyzedFiles?: string[] | undefined;
     reasoningEffort?: "high" | "xhigh" | undefined;
+    serviceTier?: "default" | "priority" | "flex" | undefined;
 }, {
     workingDir: string;
     ccOutput: string;
@@ -30,6 +32,7 @@ export declare const ReviewInputSchema: z.ZodObject<{
     customPrompt?: string | undefined;
     analyzedFiles?: string[] | undefined;
     reasoningEffort?: "high" | "xhigh" | undefined;
+    serviceTier?: "default" | "priority" | "flex" | undefined;
 }>;
 export type ReviewInput = z.infer<typeof ReviewInputSchema>;
 export declare function handleCodexReview(input: ReviewInput): Promise<{
@@ -90,6 +93,11 @@ export declare const TOOL_DEFINITIONS: {
                     description: string;
                 };
                 reasoningEffort: {
+                    type: string;
+                    enum: string[];
+                    description: string;
+                };
+                serviceTier: {
                     type: string;
                     enum: string[];
                     description: string;
@@ -176,6 +184,11 @@ export declare const TOOL_DEFINITIONS: {
                 };
                 customPrompt: {
                     type: string;
+                    description: string;
+                };
+                serviceTier: {
+                    type: string;
+                    enum: string[];
                     description: string;
                 };
             };

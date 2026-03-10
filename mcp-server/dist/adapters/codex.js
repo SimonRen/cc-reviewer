@@ -90,7 +90,7 @@ export class CodexAdapter {
                     (previousOutput ? `\nPrevious output (for reference):\n${previousOutput.slice(0, 500)}...` : '');
             }
             // Run the CLI
-            const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getReviewOutputJsonSchema);
+            const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getReviewOutputJsonSchema, request.serviceTier);
             // Handle CLI errors
             if (result.exitCode !== 0) {
                 const error = this.categorizeError(result.stderr);
@@ -254,7 +254,7 @@ export class CodexAdapter {
                     `Please fix these issues and provide valid JSON output.\n` +
                     (previousOutput ? `\nPrevious output (for reference):\n${previousOutput.slice(0, 500)}...` : '');
             }
-            const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getPeerOutputJsonSchema);
+            const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getPeerOutputJsonSchema, request.serviceTier);
             if (result.exitCode !== 0) {
                 const error = this.categorizeError(result.stderr);
                 return {
@@ -312,7 +312,7 @@ export class CodexAdapter {
                 executionTimeMs: Date.now() - startTime };
         }
     }
-    runCli(prompt, workingDir, reasoningEffort, schemaGetter) {
+    runCli(prompt, workingDir, reasoningEffort, schemaGetter, serviceTier) {
         return new Promise((resolve, reject) => {
             // Create temp schema file for structured output
             let schemaFile = null;
@@ -335,6 +335,10 @@ export class CodexAdapter {
                 '--skip-git-repo-check',
                 '-C', workingDir,
             ];
+            // Add service tier if specified (priority = fast mode, flex = cheap mode)
+            if (serviceTier && serviceTier !== 'default') {
+                args.push('-c', `service_tier=${serviceTier}`);
+            }
             // Add schema enforcement if available
             if (schemaFile) {
                 args.push('--output-schema', schemaFile);
@@ -363,7 +367,8 @@ export class CodexAdapter {
             let lastProgressTime = cliStartTime;
             let dataChunks = 0;
             // Show initial progress message
-            console.error(`[codex] Running review with ${reasoningEffort} reasoning...`);
+            const tierLabel = serviceTier && serviceTier !== 'default' ? ` [${serviceTier}]` : '';
+            console.error(`[codex] Running review with ${reasoningEffort} reasoning${tierLabel}...`);
             const maxTimer = setTimeout(() => {
                 proc.kill('SIGTERM');
                 reject(new Error('MAX_TIMEOUT'));

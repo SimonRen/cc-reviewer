@@ -22,6 +22,9 @@ export type CliType = 'codex' | 'gemini';
 // Reasoning effort level for Codex
 export type ReasoningEffort = 'high' | 'xhigh';
 
+// Service tier for Codex (controls speed/cost trade-off)
+export type ServiceTier = 'default' | 'priority' | 'flex';
+
 // Task types for peer ask tools
 export type TaskType = 'plan' | 'debug' | 'explain' | 'question' | 'fix' | 'explore' | 'general';
 
@@ -34,6 +37,7 @@ export interface FeedbackRequest {
   focusAreas?: FocusArea[];   // Areas to focus review
   customPrompt?: string;      // User's custom instructions
   reasoningEffort?: ReasoningEffort; // Codex reasoning effort (default: high)
+  serviceTier?: ServiceTier;         // Codex service tier (default: default)
 }
 
 // Successful feedback result

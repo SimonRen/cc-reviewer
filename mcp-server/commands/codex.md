@@ -43,9 +43,15 @@ Call `codex_review` with:
   "ccOutput": "<structured handoff - see below>",
   "outputType": "analysis",
   "focusAreas": ["<from $ARGUMENTS>"],
-  "reasoningEffort": "high"  // or "xhigh" for deeper analysis
+  "reasoningEffort": "high",
+  "serviceTier": "<see below>"
 }
 ```
+
+### Service Tier (from $ARGUMENTS)
+- If user says "fast mode", "fast", or "priority" → set `serviceTier: "priority"` (faster, ~2x cost)
+- If user says "flex", "cheap", or "budget" → set `serviceTier: "flex"` (50% cheaper, slower)
+- Otherwise → omit `serviceTier` (uses default tier)
 
 ### Structure your ccOutput:
 

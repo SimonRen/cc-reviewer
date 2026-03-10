@@ -19,7 +19,8 @@ Call `ask_multi` with:
   "prompt": "<your question or request from $ARGUMENTS>",
   "taskType": "<infer from request: plan|debug|explain|question|fix|explore|general>",
   "relevantFiles": ["<files related to the question>"],
-  "context": "<any error messages or prior analysis>"
+  "context": "<any error messages or prior analysis>",
+  "serviceTier": "<if user says 'fast mode'/'fast'/'priority' → 'priority'; if 'flex'/'cheap'/'budget' → 'flex'; otherwise omit. Applies to Codex only.>"
 }
 ```
 
