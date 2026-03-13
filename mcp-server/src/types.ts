@@ -23,7 +23,7 @@ export type CliType = 'codex' | 'gemini';
 export type ReasoningEffort = 'high' | 'xhigh';
 
 // Service tier for Codex (controls speed/cost trade-off)
-export type ServiceTier = 'default' | 'priority' | 'flex';
+export type ServiceTier = 'default' | 'fast' | 'flex';
 
 // Task types for peer ask tools
 export type TaskType = 'plan' | 'debug' | 'explain' | 'question' | 'fix' | 'explore' | 'general';

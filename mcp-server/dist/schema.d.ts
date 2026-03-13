@@ -651,13 +651,13 @@ export declare const SuggestedAction: z.ZodObject<{
     rationale: z.ZodString;
 }, "strip", z.ZodTypeAny, {
     rationale: string;
-    priority: "high" | "medium" | "low";
     action: string;
+    priority: "high" | "medium" | "low";
     file?: string | null | undefined;
 }, {
     rationale: string;
-    priority: "high" | "medium" | "low";
     action: string;
+    priority: "high" | "medium" | "low";
     file?: string | null | undefined;
 }>;
 export type SuggestedAction = z.infer<typeof SuggestedAction>;
@@ -688,13 +688,13 @@ export declare const PeerOutput: z.ZodObject<{
         rationale: z.ZodString;
     }, "strip", z.ZodTypeAny, {
         rationale: string;
-        priority: "high" | "medium" | "low";
         action: string;
+        priority: "high" | "medium" | "low";
         file?: string | null | undefined;
     }, {
         rationale: string;
-        priority: "high" | "medium" | "low";
         action: string;
+        priority: "high" | "medium" | "low";
         file?: string | null | undefined;
     }>, "many">;
     file_references: z.ZodArray<z.ZodObject<{
@@ -752,8 +752,8 @@ export declare const PeerOutput: z.ZodObject<{
     key_points: string[];
     suggested_actions: {
         rationale: string;
-        priority: "high" | "medium" | "low";
         action: string;
+        priority: "high" | "medium" | "low";
         file?: string | null | undefined;
     }[];
     file_references: {
@@ -780,8 +780,8 @@ export declare const PeerOutput: z.ZodObject<{
     key_points: string[];
     suggested_actions: {
         rationale: string;
-        priority: "high" | "medium" | "low";
         action: string;
+        priority: "high" | "medium" | "low";
         file?: string | null | undefined;
     }[];
     file_references: {

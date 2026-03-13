@@ -16,7 +16,7 @@ export type PeerInput = {
     focusAreas?: string[];
     customPrompt?: string;
     reasoningEffort?: 'high' | 'xhigh';
-    serviceTier?: 'default' | 'priority' | 'flex';
+    serviceTier?: 'default' | 'fast' | 'flex';
 };
 export declare function formatPeerResponse(result: PeerResult, modelName: string): string;
 export declare function handleAskCodex(input: PeerInput): Promise<{

@@ -32,7 +32,7 @@ export const ReviewInputSchema = z.object({
   ])).optional().describe('Areas to focus the review on'),
   customPrompt: z.string().optional().describe('Custom instructions for the reviewer'),
   reasoningEffort: z.enum(['high', 'xhigh']).optional().describe('Codex reasoning effort level (default: high, use xhigh for deeper analysis)'),
-  serviceTier: z.enum(['default', 'priority', 'flex']).optional().describe('Codex service tier (default: default, priority = fast mode, flex = cheaper/slower)')
+  serviceTier: z.enum(['default', 'fast', 'flex']).optional().describe('Codex service tier (default: default, fast = priority processing, flex = cheaper/slower)')
 });
 
 export type ReviewInput = z.infer<typeof ReviewInputSchema>;
@@ -398,8 +398,8 @@ export const TOOL_DEFINITIONS = {
         },
         serviceTier: {
           type: 'string',
-          enum: ['default', 'priority', 'flex'],
-          description: 'Codex service tier (priority = fast mode, flex = cheaper/slower)'
+          enum: ['default', 'fast', 'flex'],
+          description: 'Codex service tier (fast = priority processing, flex = cheaper/slower)'
         }
       },
       required: ['workingDir', 'ccOutput', 'outputType']
@@ -483,8 +483,8 @@ export const TOOL_DEFINITIONS = {
         },
         serviceTier: {
           type: 'string',
-          enum: ['default', 'priority', 'flex'],
-          description: 'Codex service tier (priority = fast mode, flex = cheaper/slower). Only applies to Codex.'
+          enum: ['default', 'fast', 'flex'],
+          description: 'Codex service tier (fast = priority processing, flex = cheaper/slower). Only applies to Codex.'
         }
       },
       required: ['workingDir', 'ccOutput', 'outputType']

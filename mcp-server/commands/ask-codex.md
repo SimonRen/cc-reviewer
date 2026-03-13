@@ -21,7 +21,7 @@ Call `ask_codex` with:
   "taskType": "<infer from request: plan|debug|explain|question|fix|explore|general>",
   "relevantFiles": ["<files related to the question>"],
   "context": "<any error messages or prior analysis>",
-  "serviceTier": "<if user says 'fast mode'/'fast'/'priority' → 'priority'; if 'flex'/'cheap'/'budget' → 'flex'; otherwise omit>"
+  "serviceTier": "<if user says 'fast mode'/'fast'/'priority' → 'fast'; if 'flex'/'cheap'/'budget' → 'flex'; otherwise omit>"
 }
 ```
 

@@ -14,7 +14,7 @@ export declare const ReviewInputSchema: z.ZodObject<{
     focusAreas: z.ZodOptional<z.ZodArray<z.ZodEnum<["security", "performance", "architecture", "correctness", "maintainability", "scalability", "testing", "documentation"]>, "many">>;
     customPrompt: z.ZodOptional<z.ZodString>;
     reasoningEffort: z.ZodOptional<z.ZodEnum<["high", "xhigh"]>>;
-    serviceTier: z.ZodOptional<z.ZodEnum<["default", "priority", "flex"]>>;
+    serviceTier: z.ZodOptional<z.ZodEnum<["default", "fast", "flex"]>>;
 }, "strip", z.ZodTypeAny, {
     workingDir: string;
     ccOutput: string;
@@ -23,7 +23,7 @@ export declare const ReviewInputSchema: z.ZodObject<{
     customPrompt?: string | undefined;
     analyzedFiles?: string[] | undefined;
     reasoningEffort?: "high" | "xhigh" | undefined;
-    serviceTier?: "default" | "priority" | "flex" | undefined;
+    serviceTier?: "default" | "fast" | "flex" | undefined;
 }, {
     workingDir: string;
     ccOutput: string;
@@ -32,7 +32,7 @@ export declare const ReviewInputSchema: z.ZodObject<{
     customPrompt?: string | undefined;
     analyzedFiles?: string[] | undefined;
     reasoningEffort?: "high" | "xhigh" | undefined;
-    serviceTier?: "default" | "priority" | "flex" | undefined;
+    serviceTier?: "default" | "fast" | "flex" | undefined;
 }>;
 export type ReviewInput = z.infer<typeof ReviewInputSchema>;
 export declare function handleCodexReview(input: ReviewInput): Promise<{

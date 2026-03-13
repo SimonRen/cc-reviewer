@@ -25,7 +25,7 @@ export type PeerInput = {
   focusAreas?: string[];
   customPrompt?: string;
   reasoningEffort?: 'high' | 'xhigh';
-  serviceTier?: 'default' | 'priority' | 'flex';
+  serviceTier?: 'default' | 'fast' | 'flex';
 };
 
 // =============================================================================
@@ -301,8 +301,8 @@ export const PEER_TOOL_DEFINITIONS = {
         },
         serviceTier: {
           type: 'string',
-          enum: ['default', 'priority', 'flex'],
-          description: 'Codex service tier (priority = fast mode, flex = cheaper/slower)',
+          enum: ['default', 'fast', 'flex'],
+          description: 'Codex service tier (fast = priority processing, flex = cheaper/slower)',
         },
       },
       required: ['workingDir', 'prompt'],
@@ -394,8 +394,8 @@ export const PEER_TOOL_DEFINITIONS = {
         },
         serviceTier: {
           type: 'string',
-          enum: ['default', 'priority', 'flex'],
-          description: 'Codex service tier (priority = fast mode, flex = cheaper/slower). Only applies to Codex.',
+          enum: ['default', 'fast', 'flex'],
+          description: 'Codex service tier (fast = priority processing, flex = cheaper/slower). Only applies to Codex.',
         },
       },
       required: ['workingDir', 'prompt'],

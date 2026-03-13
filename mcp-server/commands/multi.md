@@ -47,7 +47,7 @@ Call `multi_review` with:
 ```
 
 ### Service Tier (from $ARGUMENTS, applies to Codex only)
-- If user says "fast mode", "fast", or "priority" → set `serviceTier: "priority"`
+- If user says "fast mode", "fast", or "priority" → set `serviceTier: "fast"`
 - If user says "flex", "cheap", or "budget" → set `serviceTier: "flex"`
 - Otherwise → omit `serviceTier`
 

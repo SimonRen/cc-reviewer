@@ -5,7 +5,7 @@ export type OutputType = 'plan' | 'findings' | 'analysis' | 'proposal';
 export type FocusArea = 'security' | 'performance' | 'architecture' | 'correctness' | 'maintainability' | 'scalability' | 'testing' | 'documentation';
 export type CliType = 'codex' | 'gemini';
 export type ReasoningEffort = 'high' | 'xhigh';
-export type ServiceTier = 'default' | 'priority' | 'flex';
+export type ServiceTier = 'default' | 'fast' | 'flex';
 export type TaskType = 'plan' | 'debug' | 'explain' | 'question' | 'fix' | 'explore' | 'general';
 export interface FeedbackRequest {
     workingDir: string;
