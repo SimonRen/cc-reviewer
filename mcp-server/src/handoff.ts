@@ -112,7 +112,7 @@ export const COMPREHENSIVE_REVIEWER: ReviewerRole = {
   applicableFocusAreas: [],
   systemPrompt: `Senior staff engineer. Be skeptical — catch mistakes, don't rubber-stamp.
 Priority: correctness > security > performance > maintainability.
-Review changes using git diff and file reading. Only report real issues with evidence.`,
+Only report real issues with evidence.`,
   reviewInstructions: '',
 };
 
@@ -126,7 +126,7 @@ export const CHANGE_FOCUSED_REVIEWER: ReviewerRole = {
   isGeneric: true,
   applicableFocusAreas: [],
   systemPrompt: `Change reviewer. Focus on: goal achievement, regressions, edge cases, side effects.
-Reference specific lines in the diff. Use git diff and file reading to verify.`,
+Reference specific lines in the diff.`,
   reviewInstructions: '',
 };
 
@@ -140,7 +140,7 @@ export const SECURITY_REVIEWER: ReviewerRole = {
   isGeneric: false,
   applicableFocusAreas: ['security'],
   systemPrompt: `Security auditor. Focus on injection, auth bypass, data exposure, input validation.
-Rate by exploitability + impact. Use git diff and file reading to verify.`,
+Rate by exploitability + impact.`,
   reviewInstructions: '',
 };
 
@@ -151,7 +151,7 @@ export const PERFORMANCE_REVIEWER: ReviewerRole = {
   isGeneric: false,
   applicableFocusAreas: ['performance', 'scalability'],
   systemPrompt: `Performance engineer. Focus on complexity (Big-O), N+1 queries, memory, blocking I/O.
-Provide complexity analysis and specific optimizations. Use git diff and file reading.`,
+Provide complexity analysis and specific optimizations.`,
   reviewInstructions: '',
 };
 
@@ -162,7 +162,7 @@ export const ARCHITECTURE_REVIEWER: ReviewerRole = {
   isGeneric: false,
   applicableFocusAreas: ['architecture', 'maintainability'],
   systemPrompt: `Software architect. Focus on SOLID, coupling/cohesion, abstractions, patterns.
-Suggest refactorings. Use git diff and file reading to verify.`,
+Suggest refactorings with specific patterns.`,
   reviewInstructions: '',
 };
 
@@ -173,7 +173,7 @@ export const CORRECTNESS_REVIEWER: ReviewerRole = {
   isGeneric: false,
   applicableFocusAreas: ['correctness', 'testing'],
   systemPrompt: `Correctness analyst. Focus on logic errors, edge cases, race conditions, error handling.
-Provide triggering inputs. Use git diff and file reading to verify.`,
+Provide triggering inputs and expected vs actual behavior.`,
   reviewInstructions: '',
 };
 
@@ -271,7 +271,7 @@ ${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**
   // SECTION 7: OUTPUT FORMAT
   if (outputFormat === 'schema-enforced') {
     sections.push(`## OUTPUT FORMAT
-Respond with valid JSON matching the schema. Use \`git diff\` and file reading to verify findings. Confidence reflects YOUR certainty.`);
+Respond with valid JSON matching the schema. Verify findings with evidence. Confidence reflects YOUR certainty.`);
   } else if (outputFormat === 'json') {
     sections.push(`## OUTPUT FORMAT
 Respond with valid JSON:
