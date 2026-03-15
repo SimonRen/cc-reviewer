@@ -154,7 +154,7 @@ export function getReviewOutputJsonSchema() {
     return {
         type: 'object',
         additionalProperties: false,
-        required: ['reviewer', 'findings', 'agreements', 'disagreements', 'alternatives', 'risk_assessment', 'uncertainty_responses', 'question_answers'],
+        required: ['reviewer', 'findings', 'risk_assessment'],
         properties: {
             reviewer: { type: 'string' },
             findings: {
@@ -384,6 +384,27 @@ export function parseReviewOutput(rawOutput) {
     catch {
         return null;
     }
+}
+/**
+ * Check if a review output contains substantive content worth returning.
+ * Centralizes the "is this review empty?" check that was duplicated in adapters.
+ */
+export function isSubstantiveReview(output) {
+    if (output.findings.length > 0)
+        return true;
+    if (output.disagreements && output.disagreements.length > 0)
+        return true;
+    if (output.uncertainty_responses && output.uncertainty_responses.length > 0)
+        return true;
+    if (output.question_answers && output.question_answers.length > 0)
+        return true;
+    if (output.risk_assessment.overall_level !== 'medium' || output.risk_assessment.score !== 50)
+        return true;
+    if (output.agreements && output.agreements.length > 0)
+        return true;
+    if (output.alternatives && output.alternatives.length > 0)
+        return true;
+    return false;
 }
 /**
  * Convert legacy markdown format to structured output (best effort).

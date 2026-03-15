@@ -13,7 +13,6 @@ import {
   ReviewResult,
   getAdapter,
   getAvailableAdapters,
-  selectExpertRole,
 } from '../adapters/index.js';
 import { ReviewOutput } from '../schema.js';
 
@@ -210,8 +209,6 @@ export async function handleCodexReview(input: ReviewInput): Promise<{ content: 
   }
 
   const request = toReviewRequest(input);
-  request.expertRole = selectExpertRole(input.focusAreas as FocusArea[] | undefined);
-
   const result = await adapter.runReview(request);
 
   return {
@@ -244,8 +241,6 @@ export async function handleGeminiReview(input: ReviewInput): Promise<{ content:
   }
 
   const request = toReviewRequest(input);
-  request.expertRole = selectExpertRole(input.focusAreas as FocusArea[] | undefined);
-
   const result = await adapter.runReview(request);
 
   return {
@@ -282,7 +277,6 @@ Install at least one:
   // Run all available adapters in parallel
   const promises = availableAdapters.map(async (adapter) => {
     const adapterRequest = { ...request };
-    adapterRequest.expertRole = selectExpertRole(input.focusAreas as FocusArea[] | undefined);
     const result = await adapter.runReview(adapterRequest);
     return { adapter, result };
   });

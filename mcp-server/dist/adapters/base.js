@@ -5,180 +5,47 @@
  * Makes it easy to add new models (Ollama, Azure, etc.) without
  * changing the core orchestration logic.
  */
+/** @deprecated Use handoff.ts selectRole() instead */
 export const EXPERT_ROLES = {
     security_auditor: {
-        name: 'Security Auditor',
-        description: 'Specializes in security vulnerabilities and secure coding practices',
-        systemPrompt: `You are a senior security auditor with expertise in:
-- OWASP Top 10 vulnerabilities (injection, broken auth, XSS, CSRF, etc.)
-- Authentication and authorization flaws
-- Input validation and sanitization
-- Cryptographic weaknesses and misuse
-- Sensitive data exposure
-- Security misconfigurations
-- Dependency vulnerabilities
-
-When reviewing code:
-1. Identify specific vulnerability patterns with CWE IDs when applicable
-2. Rate severity using CVSS-like scoring (critical/high/medium/low/info)
-3. Provide concrete proof-of-concept or attack scenarios
-4. Suggest specific remediations with code examples
-5. Note any security best practices being followed (to validate CC's work)`,
-        focusAreas: ['security'],
-        evaluationCriteria: [
-            'SQL/NoSQL injection vectors',
-            'XSS (stored, reflected, DOM)',
-            'Authentication bypass',
-            'Authorization flaws (IDOR, privilege escalation)',
-            'Insecure deserialization',
-            'SSRF vulnerabilities',
-            'Path traversal',
-            'Command injection',
-            'Secrets in code',
-            'Insecure dependencies',
-        ],
+        name: 'Security Auditor', description: 'Security vulnerabilities',
+        systemPrompt: 'Security auditor. Focus on injection, auth bypass, data exposure, input validation.',
+        focusAreas: ['security'], evaluationCriteria: ['Injection', 'Auth', 'Data exposure'],
     },
     performance_engineer: {
-        name: 'Performance Engineer',
-        description: 'Specializes in performance optimization and efficiency',
-        systemPrompt: `You are a senior performance engineer with expertise in:
-- Algorithm complexity analysis (Big-O notation)
-- Memory management and leak detection
-- Database query optimization
-- Caching strategies
-- Concurrency and parallelism
-- I/O optimization
-- Bundle size and load time optimization
-
-When reviewing code:
-1. Analyze algorithmic complexity with Big-O notation
-2. Identify memory leaks, unnecessary allocations, or retention issues
-3. Spot N+1 query problems and suggest batching/caching
-4. Recommend specific optimizations with expected improvements
-5. Validate any performance claims from CC with analysis`,
-        focusAreas: ['performance', 'scalability'],
-        evaluationCriteria: [
-            'Time complexity',
-            'Space complexity',
-            'Memory leaks',
-            'Unnecessary re-renders',
-            'N+1 queries',
-            'Missing indexes',
-            'Inefficient loops',
-            'Blocking operations',
-            'Cache invalidation',
-            'Resource pooling',
-        ],
+        name: 'Performance Engineer', description: 'Performance optimization',
+        systemPrompt: 'Performance engineer. Focus on complexity, N+1 queries, memory leaks.',
+        focusAreas: ['performance', 'scalability'], evaluationCriteria: ['Complexity', 'Memory', 'I/O'],
     },
     architect: {
-        name: 'Software Architect',
-        description: 'Specializes in design patterns, architecture, and maintainability',
-        systemPrompt: `You are a senior software architect with expertise in:
-- Design patterns (GoF, enterprise patterns)
-- SOLID principles
-- Clean architecture and DDD
-- API design and contracts
-- Dependency management
-- Code organization and modularity
-- Technical debt assessment
-
-When reviewing code:
-1. Evaluate adherence to design patterns and principles
-2. Identify coupling issues and suggest decoupling strategies
-3. Assess abstraction levels and cohesion
-4. Recommend refactoring opportunities with specific patterns
-5. Evaluate API design for consistency and usability`,
-        focusAreas: ['architecture', 'maintainability'],
-        evaluationCriteria: [
-            'Single responsibility',
-            'Open/closed principle',
-            'Liskov substitution',
-            'Interface segregation',
-            'Dependency inversion',
-            'Coupling and cohesion',
-            'Abstraction levels',
-            'Error handling patterns',
-            'API consistency',
-            'Technical debt indicators',
-        ],
+        name: 'Software Architect', description: 'Architecture and design',
+        systemPrompt: 'Software architect. Focus on SOLID, coupling, abstractions.',
+        focusAreas: ['architecture', 'maintainability'], evaluationCriteria: ['SOLID', 'Coupling', 'Patterns'],
     },
     correctness_analyst: {
-        name: 'Correctness Analyst',
-        description: 'Specializes in logic errors, edge cases, and bugs',
-        systemPrompt: `You are a meticulous code analyst focused on correctness:
-- Logic errors and off-by-one mistakes
-- Edge cases and boundary conditions
-- Null/undefined handling
-- Type safety issues
-- Race conditions and concurrency bugs
-- Error handling completeness
-- State management issues
-
-When reviewing code:
-1. Trace execution paths looking for logic errors
-2. Identify missing edge case handling
-3. Spot potential null pointer/undefined errors
-4. Check for race conditions in async code
-5. Verify error handling covers failure modes`,
-        focusAreas: ['correctness', 'testing'],
-        evaluationCriteria: [
-            'Off-by-one errors',
-            'Null/undefined safety',
-            'Boundary conditions',
-            'Integer overflow',
-            'Floating point precision',
-            'Race conditions',
-            'Deadlocks',
-            'Exception handling',
-            'State consistency',
-            'Test coverage gaps',
-        ],
+        name: 'Correctness Analyst', description: 'Logic errors and bugs',
+        systemPrompt: 'Correctness analyst. Focus on logic errors, edge cases, race conditions.',
+        focusAreas: ['correctness', 'testing'], evaluationCriteria: ['Logic', 'Edge cases', 'Concurrency'],
     },
     general_reviewer: {
-        name: 'General Reviewer',
-        description: 'Balanced review across all areas',
-        systemPrompt: `You are a senior software engineer conducting a thorough code review.
-Review the code across multiple dimensions:
-- Correctness: Logic errors, edge cases, bugs
-- Security: Vulnerabilities, input validation
-- Performance: Efficiency, complexity
-- Maintainability: Readability, patterns, documentation
-
-Prioritize findings by impact and likelihood. Be specific with file paths
-and line numbers. Provide actionable suggestions.`,
+        name: 'General Reviewer', description: 'Balanced review',
+        systemPrompt: 'Senior engineer. Review correctness, security, performance, maintainability.',
         focusAreas: ['security', 'performance', 'architecture', 'correctness', 'maintainability'],
-        evaluationCriteria: [
-            'Logic correctness',
-            'Security vulnerabilities',
-            'Performance issues',
-            'Code quality',
-            'Documentation',
-        ],
+        evaluationCriteria: ['Correctness', 'Security', 'Performance', 'Quality'],
     },
 };
-/**
- * Select the best expert role based on requested focus areas
- */
+/** @deprecated Use handoff.ts selectRole() instead */
 export function selectExpertRole(focusAreas) {
-    if (!focusAreas || focusAreas.length === 0) {
+    if (!focusAreas || focusAreas.length === 0)
         return EXPERT_ROLES.general_reviewer;
-    }
-    // Prioritize security if it's in the list
-    if (focusAreas.includes('security')) {
+    if (focusAreas.includes('security'))
         return EXPERT_ROLES.security_auditor;
-    }
-    // Check for performance/scalability
-    if (focusAreas.includes('performance') || focusAreas.includes('scalability')) {
+    if (focusAreas.includes('performance') || focusAreas.includes('scalability'))
         return EXPERT_ROLES.performance_engineer;
-    }
-    // Check for architecture/maintainability
-    if (focusAreas.includes('architecture') || focusAreas.includes('maintainability')) {
+    if (focusAreas.includes('architecture') || focusAreas.includes('maintainability'))
         return EXPERT_ROLES.architect;
-    }
-    // Check for correctness/testing
-    if (focusAreas.includes('correctness') || focusAreas.includes('testing')) {
+    if (focusAreas.includes('correctness') || focusAreas.includes('testing'))
         return EXPERT_ROLES.correctness_analyst;
-    }
     return EXPERT_ROLES.general_reviewer;
 }
 // =============================================================================

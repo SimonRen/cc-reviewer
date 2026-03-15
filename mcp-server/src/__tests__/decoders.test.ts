@@ -1,9 +1,10 @@
 /**
- * Tests for decoders/codex.ts — CodexEventDecoder
+ * Tests for decoders — CodexEventDecoder + GeminiEventDecoder
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import { CodexEventDecoder } from '../decoders/codex.js';
+import { GeminiEventDecoder } from '../decoders/gemini.js';
 
 // =============================================================================
 // TEST HELPERS
@@ -215,5 +216,105 @@ describe('CodexEventDecoder — getUsage', () => {
     expect(usage!.input_tokens).toBe(200);
     expect(usage!.output_tokens).toBe(75);
     expect(usage!.cached_input_tokens).toBeUndefined();
+  });
+});
+
+// =============================================================================
+// GEMINI EVENT DECODER TESTS
+// =============================================================================
+
+describe('GeminiEventDecoder — getFinalResponse', () => {
+  it('returns empty string when no events processed', () => {
+    const decoder = new GeminiEventDecoder();
+    expect(decoder.getFinalResponse()).toBe('');
+  });
+
+  it('concatenates assistant message deltas into final response', () => {
+    const decoder = new GeminiEventDecoder();
+    const lines = [
+      '{"type":"init","session_id":"abc","model":"gemini-3"}',
+      '{"type":"message","role":"user","content":"review this"}',
+      '{"type":"message","role":"assistant","content":"{\\"reviewer\\":","delta":true}',
+      '{"type":"tool_use","tool_name":"read_file","tool_id":"t1","parameters":{}}',
+      '{"type":"tool_result","tool_id":"t1","status":"success","output":"file contents"}',
+      '{"type":"message","role":"assistant","content":"\\"gemini\\"}","delta":true}',
+      '{"type":"result","status":"success","stats":{"total_tokens":100,"input_tokens":80,"output_tokens":20,"duration_ms":5000}}',
+    ];
+
+    for (const line of lines) {
+      decoder.processLine(line);
+    }
+
+    expect(decoder.getFinalResponse()).toBe('{"reviewer":"gemini"}');
+  });
+
+  it('ignores user messages', () => {
+    const decoder = new GeminiEventDecoder();
+    decoder.processLine('{"type":"message","role":"user","content":"hello"}');
+    expect(decoder.getFinalResponse()).toBe('');
+  });
+
+  it('ignores assistant messages without delta flag', () => {
+    const decoder = new GeminiEventDecoder();
+    decoder.processLine('{"type":"message","role":"assistant","content":"no delta"}');
+    expect(decoder.getFinalResponse()).toBe('');
+  });
+});
+
+describe('GeminiEventDecoder — onProgress', () => {
+  it('calls onProgress for every valid event', () => {
+    const decoder = new GeminiEventDecoder();
+    const events: string[] = [];
+    decoder.onProgress = (type) => events.push(type);
+
+    decoder.processLine('{"type":"init","session_id":"abc","model":"gemini-3"}');
+    decoder.processLine('{"type":"tool_use","tool_name":"read_file","tool_id":"t1"}');
+    decoder.processLine('{"type":"result","status":"success","stats":{"total_tokens":100,"input_tokens":80,"output_tokens":20,"duration_ms":5000}}');
+
+    expect(events).toEqual(['init', 'tool_use', 'result']);
+  });
+
+  it('provides detail for tool_use events', () => {
+    const decoder = new GeminiEventDecoder();
+    const details: Array<string | undefined> = [];
+    decoder.onProgress = (_type, detail) => details.push(detail);
+
+    decoder.processLine('{"type":"tool_use","tool_name":"read_file","tool_id":"t1"}');
+
+    expect(details.some(d => d?.includes('read_file'))).toBe(true);
+  });
+});
+
+describe('GeminiEventDecoder — malformed input', () => {
+  it('handles malformed JSONL lines gracefully', () => {
+    const decoder = new GeminiEventDecoder();
+    expect(() => decoder.processLine('not json')).not.toThrow();
+    expect(decoder.getFinalResponse()).toBe('');
+  });
+
+  it('skips non-object JSON values', () => {
+    const decoder = new GeminiEventDecoder();
+    decoder.processLine('"just a string"');
+    decoder.processLine('[1,2,3]');
+    expect(decoder.getFinalResponse()).toBe('');
+  });
+});
+
+describe('GeminiEventDecoder — getStats', () => {
+  it('returns null when no result event processed', () => {
+    const decoder = new GeminiEventDecoder();
+    expect(decoder.getStats()).toBeNull();
+  });
+
+  it('extracts stats from result event', () => {
+    const decoder = new GeminiEventDecoder();
+    decoder.processLine('{"type":"result","status":"success","stats":{"total_tokens":100,"input_tokens":80,"output_tokens":20,"duration_ms":5000}}');
+
+    expect(decoder.getStats()).toEqual({
+      total_tokens: 100,
+      input_tokens: 80,
+      output_tokens: 20,
+      duration_ms: 5000,
+    });
   });
 });

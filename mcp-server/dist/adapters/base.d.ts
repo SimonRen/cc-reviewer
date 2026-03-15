@@ -42,9 +42,19 @@ export interface ReviewRequest {
     reasoningEffort?: ReasoningEffort;
     /** Service tier (for models that support it: priority = fast, flex = cheap) */
     serviceTier?: ServiceTier;
-    /** Expert role configuration (optional override) */
-    expertRole?: ExpertRole;
 }
+/** @deprecated Use handoff.ts roles instead */
+export interface ExpertRole {
+    name: string;
+    description: string;
+    systemPrompt: string;
+    focusAreas: FocusArea[];
+    evaluationCriteria: string[];
+}
+/** @deprecated Use handoff.ts selectRole() instead */
+export declare const EXPERT_ROLES: Record<string, ExpertRole>;
+/** @deprecated Use handoff.ts selectRole() instead */
+export declare function selectExpertRole(focusAreas?: FocusArea[]): ExpertRole;
 export interface PeerRequest {
     /** Working directory containing the code */
     workingDir: string;
@@ -65,18 +75,6 @@ export interface PeerRequest {
     /** Service tier (for models that support it: priority = fast, flex = cheap) */
     serviceTier?: ServiceTier;
 }
-export interface ExpertRole {
-    name: string;
-    description: string;
-    systemPrompt: string;
-    focusAreas: FocusArea[];
-    evaluationCriteria: string[];
-}
-export declare const EXPERT_ROLES: Record<string, ExpertRole>;
-/**
- * Select the best expert role based on requested focus areas
- */
-export declare function selectExpertRole(focusAreas?: FocusArea[]): ExpertRole;
 export interface ReviewSuccess {
     success: true;
     output: ReviewOutput;

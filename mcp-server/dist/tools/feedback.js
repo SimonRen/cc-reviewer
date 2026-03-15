@@ -6,7 +6,7 @@
  * 2. Multi-model parallel review (multi_review)
  */
 import { z } from 'zod';
-import { getAdapter, getAvailableAdapters, selectExpertRole, } from '../adapters/index.js';
+import { getAdapter, getAvailableAdapters, } from '../adapters/index.js';
 // =============================================================================
 // INPUT SCHEMAS
 // =============================================================================
@@ -176,7 +176,6 @@ export async function handleCodexReview(input) {
         };
     }
     const request = toReviewRequest(input);
-    request.expertRole = selectExpertRole(input.focusAreas);
     const result = await adapter.runReview(request);
     return {
         content: [{
@@ -205,7 +204,6 @@ export async function handleGeminiReview(input) {
         };
     }
     const request = toReviewRequest(input);
-    request.expertRole = selectExpertRole(input.focusAreas);
     const result = await adapter.runReview(request);
     return {
         content: [{
@@ -236,7 +234,6 @@ Install at least one:
     // Run all available adapters in parallel
     const promises = availableAdapters.map(async (adapter) => {
         const adapterRequest = { ...request };
-        adapterRequest.expertRole = selectExpertRole(input.focusAreas);
         const result = await adapter.runReview(adapterRequest);
         return { adapter, result };
     });

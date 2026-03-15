@@ -18,10 +18,10 @@ import {
   PeerRequest,
   PeerResult,
   registerAdapter,
-  EXPERT_ROLES,
 } from './base.js';
-import { ReviewOutput, parseReviewOutput, parseLegacyMarkdownOutput, getReviewOutputJsonSchema, getPeerOutputJsonSchema, parsePeerOutput } from '../schema.js';
-import { buildReviewPrompt, isValidFeedbackOutput } from '../prompt.js';
+import { parseReviewOutput, parseLegacyMarkdownOutput, getReviewOutputJsonSchema, getPeerOutputJsonSchema, parsePeerOutput, isSubstantiveReview } from '../schema.js';
+import { CliExecutor } from '../executor.js';
+import { CodexEventDecoder } from '../decoders/index.js';
 import {
   buildSimpleHandoff,
   buildHandoffPrompt,
@@ -34,10 +34,14 @@ import {
 // CONFIGURATION
 // =============================================================================
 
-const INACTIVITY_TIMEOUT_MS = 120000;  // 2 min of no output = timeout
-const MAX_TIMEOUT_MS = 3600000;        // 60 min absolute max
+const COLD_START_TIMEOUT_MS: Record<string, number> = {
+  high: 180_000,   // 3 min — waiting for first JSONL event
+  xhigh: 300_000,  // 5 min — xhigh thinks longer before first event
+};
+const STREAMING_TIMEOUT_MS = 90_000;  // 90s — if events stop mid-stream
+const MAX_TIMEOUT_MS = 3_600_000;     // 60 min absolute max
 const MAX_RETRIES = 2;
-const MAX_BUFFER_SIZE = 1024 * 1024;   // 1MB max buffer
+const MAX_BUFFER_SIZE = 1024 * 1024;  // 1MB max buffer
 
 // =============================================================================
 // CODEX ADAPTER
@@ -199,18 +203,8 @@ export class CodexAdapter implements ReviewerAdapter {
         };
       }
 
-      // Check for empty/minimal data on any parse path
-      // A valid review may have findings, agreements, disagreements, alternatives,
-      // or a non-default risk assessment. Only retry if truly empty across all fields.
-      const hasMinimalData =
-        output.findings.length === 0 &&
-        output.agreements.length === 0 &&
-        output.disagreements.length === 0 &&
-        output.alternatives.length === 0 &&
-        output.risk_assessment.overall_level === 'medium' &&
-        output.risk_assessment.score === 50;
-
-      if (hasMinimalData) {
+      // Check for empty/minimal output — centralized substance check
+      if (!isSubstantiveReview(output)) {
         if (attempt < MAX_RETRIES) {
           console.error(`[codex] Received empty output, retrying...`);
           return this.runWithRetry(
@@ -219,12 +213,11 @@ export class CodexAdapter implements ReviewerAdapter {
             startTime,
             usedFallback
               ? 'Received markdown output instead of JSON. Please provide valid JSON output.'
-              : 'Output contained no findings, agreements, or disagreements. Please provide substantive review.',
+              : 'Output contained no substantive review content. Please provide findings or analysis.',
             result.stdout
           );
         }
 
-        // Final attempt with no data — report failure
         return {
           success: false,
           error: {
@@ -405,164 +398,97 @@ export class CodexAdapter implements ReviewerAdapter {
     }
   }
 
-  private runCli(
+  private async runCli(
     prompt: string,
     workingDir: string,
     reasoningEffort: 'high' | 'xhigh',
     schemaGetter: () => object,
     serviceTier?: string
   ): Promise<{ stdout: string; stderr: string; exitCode: number; truncated: boolean }> {
-    return new Promise((resolve, reject) => {
-      // Create temp schema file for structured output
-      let schemaFile: string | null = null;
-      try {
-        const tempDir = mkdtempSync(join(tmpdir(), 'codex-schema-'));
-        schemaFile = join(tempDir, 'schema.json');
-        const schema = schemaGetter();
-        writeFileSync(schemaFile, JSON.stringify(schema, null, 2), 'utf-8');
-      } catch (err) {
-        console.error('[codex] Warning: Failed to create schema file, continuing without structured output:', err);
-        schemaFile = null;
-      }
+    // Create temp schema file for structured output
+    let schemaFile: string | null = null;
+    try {
+      const tempDir = mkdtempSync(join(tmpdir(), 'codex-schema-'));
+      schemaFile = join(tempDir, 'schema.json');
+      const schema = schemaGetter();
+      writeFileSync(schemaFile, JSON.stringify(schema, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('[codex] Warning: Failed to create schema file:', err);
+      schemaFile = null;
+    }
 
-      const args = [
-        'exec',
-        '-m', 'gpt-5.4',
-        '-c', `model_reasoning_effort=${reasoningEffort}`,
-        '-c', 'model_reasoning_summary_format=experimental',
-        '--dangerously-bypass-approvals-and-sandbox',
-        '--skip-git-repo-check',
-        '-C', workingDir,
-      ];
+    const args = [
+      'exec',
+      '--json',  // JSONL streaming events
+      '-m', 'gpt-5.4',
+      '-c', `model_reasoning_effort=${reasoningEffort}`,
+      '-c', 'model_reasoning_summary_format=experimental',
+      '--dangerously-bypass-approvals-and-sandbox',
+      '--skip-git-repo-check',
+      '-C', workingDir,
+    ];
 
-      // Add service tier if specified (priority = fast mode, flex = cheap mode)
-      if (serviceTier && serviceTier !== 'default') {
-        args.push('-c', `service_tier=${serviceTier}`);
-      }
+    if (serviceTier && serviceTier !== 'default') {
+      args.push('-c', `service_tier=${serviceTier}`);
+    }
 
-      // Add schema enforcement if available
-      if (schemaFile) {
-        args.push('--output-schema', schemaFile);
-      }
+    if (schemaFile) {
+      args.push('--output-schema', schemaFile);
+    }
 
-      // Use '-' to read prompt from stdin — more stable for complex prompts
-      // with newlines, backticks, JSON templates, etc.
-      args.push('-');
+    args.push('-');  // Read prompt from stdin
 
-      const proc = spawn('codex', args, {
-        cwd: workingDir,
-        stdio: ['pipe', 'pipe', 'pipe'],  // stdin is pipe for prompt delivery
-        env: { ...process.env }
-      });
+    const decoder = new CodexEventDecoder();
+    const cliStartTime = Date.now();
+    let firstEventReceived = false;
 
-      // Guard against EPIPE if the child exits before consuming stdin.
-      // Log but don't reject — let the `close` handler capture the real exit code.
-      proc.stdin.on('error', (err) => {
-        console.error(`[codex] stdin error (likely EPIPE): ${err.message}`);
-      });
+    const tierLabel = serviceTier && serviceTier !== 'default' ? ` [${serviceTier}]` : '';
+    console.error(`[codex] Running review with ${reasoningEffort} reasoning${tierLabel}...`);
 
-      // Deliver prompt via stdin
-      proc.stdin.write(prompt);
-      proc.stdin.end();
+    decoder.onProgress = (eventType, detail) => {
+      const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
+      const detailStr = detail ? ` — ${detail}` : '';
+      console.error(`[codex] ${eventType}${detailStr} (${elapsed}s)`);
+    };
 
-      let stdout = '';
-      let stderr = '';
-      let truncated = false;
-      let inactivityTimer: NodeJS.Timeout;
-      const cliStartTime = Date.now();
-      let lastProgressTime = cliStartTime;
-      let dataChunks = 0;
+    const executor = new CliExecutor({
+      command: 'codex',
+      args,
+      cwd: workingDir,
+      stdin: prompt,
+      inactivityTimeoutMs: COLD_START_TIMEOUT_MS[reasoningEffort] || COLD_START_TIMEOUT_MS.high,
+      maxTimeoutMs: MAX_TIMEOUT_MS,
+      maxBufferSize: MAX_BUFFER_SIZE,
+      onLine: (line: string) => {
+        decoder.processLine(line);
 
-      // Show initial progress message
-      const tierLabel = serviceTier && serviceTier !== 'default' ? ` [${serviceTier}]` : '';
-      console.error(`[codex] Running review with ${reasoningEffort} reasoning${tierLabel}...`);
-
-      const maxTimer = setTimeout(() => {
-        proc.kill('SIGTERM');
-        reject(new Error('MAX_TIMEOUT'));
-      }, MAX_TIMEOUT_MS);
-
-      const resetInactivityTimer = () => {
-        clearTimeout(inactivityTimer);
-        inactivityTimer = setTimeout(() => {
-          proc.kill('SIGTERM');
-          reject(new Error('TIMEOUT'));
-        }, INACTIVITY_TIMEOUT_MS);
-      };
-
-      resetInactivityTimer();
-
-      proc.stdout.on('data', (data) => {
-        resetInactivityTimer();
-        dataChunks++;
-
-        // Show progress dot every 5 chunks
-        if (dataChunks % 5 === 0) {
-          process.stderr.write('.');
+        // Phase transition: tighten timeout after first event
+        if (!firstEventReceived) {
+          firstEventReceived = true;
+          executor.setInactivityTimeout(STREAMING_TIMEOUT_MS);
         }
-
-        // Show elapsed time every 10 seconds
-        const now = Date.now();
-        if (now - lastProgressTime > 10000) {
-          const elapsed = Math.round((now - cliStartTime) / 1000);
-          console.error(` [${elapsed}s]`);
-          lastProgressTime = now;
-        }
-
-        if (stdout.length < MAX_BUFFER_SIZE) {
-          stdout += data.toString();
-          if (stdout.length > MAX_BUFFER_SIZE) {
-            stdout = stdout.slice(0, MAX_BUFFER_SIZE);
-            truncated = true;
-          }
-        }
-      });
-
-      proc.stderr.on('data', (data) => {
-        resetInactivityTimer();
-        if (stderr.length < MAX_BUFFER_SIZE) {
-          stderr += data.toString();
-          if (stderr.length > MAX_BUFFER_SIZE) {
-            stderr = stderr.slice(0, MAX_BUFFER_SIZE);
-          }
-        }
-      });
-
-      proc.on('close', (code) => {
-        clearTimeout(inactivityTimer);
-        clearTimeout(maxTimer);
-        const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
-        console.error(` ✓ [${elapsed}s]`);
-
-        // Cleanup temp schema file
-        if (schemaFile) {
-          try {
-            unlinkSync(schemaFile);
-          } catch {
-            // Ignore cleanup errors
-          }
-        }
-
-        resolve({ stdout, stderr, exitCode: code ?? -1, truncated });
-      });
-
-      proc.on('error', (err) => {
-        clearTimeout(inactivityTimer);
-        clearTimeout(maxTimer);
-        console.error(' ✗');
-
-        // Cleanup temp schema file
-        if (schemaFile) {
-          try {
-            unlinkSync(schemaFile);
-          } catch {
-            // Ignore cleanup errors
-          }
-        }
-
-        reject(err);
-      });
+      },
     });
+
+    try {
+      const result = await executor.run();
+
+      const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
+      console.error(`[codex] ✓ complete (${elapsed}s)`);
+
+      const finalResponse = decoder.getFinalResponse();
+
+      return {
+        stdout: finalResponse || result.rawStdout,
+        stderr: result.stderr,
+        exitCode: result.exitCode,
+        truncated: result.truncated,
+      };
+    } finally {
+      if (schemaFile) {
+        try { unlinkSync(schemaFile); } catch { /* ignore */ }
+      }
+    }
   }
 
   private categorizeError(stderr: string): ReviewError {

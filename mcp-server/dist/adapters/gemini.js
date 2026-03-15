@@ -7,13 +7,16 @@
 import { spawn } from 'child_process';
 import { existsSync } from 'fs';
 import { registerAdapter, } from './base.js';
-import { parseReviewOutput, parseLegacyMarkdownOutput, parsePeerOutput } from '../schema.js';
+import { parseReviewOutput, parseLegacyMarkdownOutput, parsePeerOutput, isSubstantiveReview } from '../schema.js';
+import { CliExecutor } from '../executor.js';
+import { GeminiEventDecoder } from '../decoders/index.js';
 import { buildSimpleHandoff, buildHandoffPrompt, buildPeerPrompt, selectRole, } from '../handoff.js';
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
-const INACTIVITY_TIMEOUT_MS = 600000; // 10 min of no output = timeout (Gemini buffers entire response with --output-format json)
-const MAX_TIMEOUT_MS = 3600000; // 60 min absolute max
+const COLD_START_TIMEOUT_MS = 300_000; // 5 min — waiting for first JSONL event
+const STREAMING_TIMEOUT_MS = 90_000; // 90s — if events stop mid-stream
+const MAX_TIMEOUT_MS = 3_600_000; // 60 min absolute max
 const MAX_RETRIES = 2;
 const MAX_BUFFER_SIZE = 1024 * 1024; // 1MB max buffer
 // =============================================================================
@@ -136,23 +139,14 @@ export class GeminiAdapter {
                     executionTimeMs: Date.now() - startTime,
                 };
             }
-            // If output has no substantive data, retry or fail
-            // A valid review may have findings, agreements, disagreements, alternatives,
-            // or a non-default risk assessment. Only retry if truly empty across all fields.
-            const hasMinimalData = output.findings.length === 0 &&
-                output.agreements.length === 0 &&
-                output.disagreements.length === 0 &&
-                output.alternatives.length === 0 &&
-                output.risk_assessment.overall_level === 'medium' &&
-                output.risk_assessment.score === 50;
-            if (hasMinimalData) {
+            // Check for empty/minimal output — centralized substance check
+            if (!isSubstantiveReview(output)) {
                 if (attempt < MAX_RETRIES) {
                     console.error(`[gemini] Received empty output, retrying...`);
                     return this.runWithRetry(request, attempt + 1, startTime, usedFallback
                         ? 'Received markdown output instead of JSON. Please provide valid JSON output.'
-                        : 'Output contained no findings, agreements, or disagreements. Please provide substantive review.', result.stdout);
+                        : 'Output contained no substantive review content. Please provide findings or analysis.', result.stdout);
                 }
-                // Final attempt with no data — report failure
                 return {
                     success: false,
                     error: {
@@ -303,96 +297,48 @@ export class GeminiAdapter {
                 executionTimeMs: Date.now() - startTime };
         }
     }
-    runCli(prompt, workingDir) {
-        return new Promise((resolve, reject) => {
-            // Gemini CLI uses --yolo for auto-approval, prompt passed via stdin
-            // to avoid escaping issues with complex prompts containing newlines,
-            // backticks, JSON templates, etc.
-            const args = [
-                '--yolo',
-                '--output-format', 'json', // Force JSON output
-                '--include-directories', workingDir,
-                '-p', '', // Force headless mode; actual prompt delivered via stdin
-            ];
-            const proc = spawn('gemini', args, {
-                cwd: workingDir,
-                stdio: ['pipe', 'pipe', 'pipe'], // stdin is pipe for prompt delivery
-                env: { ...process.env }
-            });
-            // Guard against EPIPE if the child exits before consuming stdin.
-            // Log but don't reject — let the `close` handler capture the real exit code.
-            proc.stdin.on('error', (err) => {
-                console.error(`[gemini] stdin error (likely EPIPE): ${err.message}`);
-            });
-            // Deliver prompt via stdin — more stable than args for complex content
-            proc.stdin.write(prompt);
-            proc.stdin.end();
-            let stdout = '';
-            let stderr = '';
-            let truncated = false;
-            let inactivityTimer;
-            const cliStartTime = Date.now();
-            let lastProgressTime = cliStartTime;
-            let dataChunks = 0;
-            // Show initial progress message
-            console.error('[gemini] Running review...');
-            const maxTimer = setTimeout(() => {
-                proc.kill('SIGTERM');
-                reject(new Error('MAX_TIMEOUT'));
-            }, MAX_TIMEOUT_MS);
-            const resetInactivityTimer = () => {
-                clearTimeout(inactivityTimer);
-                inactivityTimer = setTimeout(() => {
-                    proc.kill('SIGTERM');
-                    reject(new Error('TIMEOUT'));
-                }, INACTIVITY_TIMEOUT_MS);
-            };
-            resetInactivityTimer();
-            proc.stdout.on('data', (data) => {
-                resetInactivityTimer();
-                dataChunks++;
-                // Show progress dot every 5 chunks
-                if (dataChunks % 5 === 0) {
-                    process.stderr.write('.');
+    async runCli(prompt, workingDir) {
+        const args = [
+            '--yolo',
+            '--output-format', 'stream-json', // JSONL streaming events (was: json)
+            '--include-directories', workingDir,
+            '-p', '', // Headless mode; prompt via stdin
+        ];
+        const decoder = new GeminiEventDecoder();
+        const cliStartTime = Date.now();
+        let firstEventReceived = false;
+        console.error('[gemini] Running review...');
+        decoder.onProgress = (eventType, detail) => {
+            const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
+            const detailStr = detail ? ` — ${detail}` : '';
+            console.error(`[gemini] ${eventType}${detailStr} (${elapsed}s)`);
+        };
+        const executor = new CliExecutor({
+            command: 'gemini',
+            args,
+            cwd: workingDir,
+            stdin: prompt,
+            inactivityTimeoutMs: COLD_START_TIMEOUT_MS,
+            maxTimeoutMs: MAX_TIMEOUT_MS,
+            maxBufferSize: MAX_BUFFER_SIZE,
+            onLine: (line) => {
+                decoder.processLine(line);
+                if (!firstEventReceived) {
+                    firstEventReceived = true;
+                    executor.setInactivityTimeout(STREAMING_TIMEOUT_MS);
                 }
-                // Show elapsed time every 10 seconds
-                const now = Date.now();
-                if (now - lastProgressTime > 10000) {
-                    const elapsed = Math.round((now - cliStartTime) / 1000);
-                    console.error(` [${elapsed}s]`);
-                    lastProgressTime = now;
-                }
-                if (stdout.length < MAX_BUFFER_SIZE) {
-                    stdout += data.toString();
-                    if (stdout.length > MAX_BUFFER_SIZE) {
-                        stdout = stdout.slice(0, MAX_BUFFER_SIZE);
-                        truncated = true;
-                    }
-                }
-            });
-            proc.stderr.on('data', (data) => {
-                resetInactivityTimer();
-                if (stderr.length < MAX_BUFFER_SIZE) {
-                    stderr += data.toString();
-                    if (stderr.length > MAX_BUFFER_SIZE) {
-                        stderr = stderr.slice(0, MAX_BUFFER_SIZE);
-                    }
-                }
-            });
-            proc.on('close', (code) => {
-                clearTimeout(inactivityTimer);
-                clearTimeout(maxTimer);
-                const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
-                console.error(` ✓ [${elapsed}s]`);
-                resolve({ stdout, stderr, exitCode: code ?? -1, truncated });
-            });
-            proc.on('error', (err) => {
-                clearTimeout(inactivityTimer);
-                clearTimeout(maxTimer);
-                console.error(' ✗');
-                reject(err);
-            });
+            },
         });
+        const result = await executor.run();
+        const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
+        console.error(`[gemini] ✓ complete (${elapsed}s)`);
+        const finalResponse = decoder.getFinalResponse();
+        return {
+            stdout: finalResponse || result.rawStdout,
+            stderr: result.stderr,
+            exitCode: result.exitCode,
+            truncated: result.truncated,
+        };
     }
     categorizeError(stderr) {
         const lower = stderr.toLowerCase();

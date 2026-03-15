@@ -640,6 +640,11 @@ export declare function getReviewOutputJsonSchema(): object;
  */
 export declare function parseReviewOutput(rawOutput: string): ReviewOutput | null;
 /**
+ * Check if a review output contains substantive content worth returning.
+ * Centralizes the "is this review empty?" check that was duplicated in adapters.
+ */
+export declare function isSubstantiveReview(output: ReviewOutput): boolean;
+/**
  * Convert legacy markdown format to structured output (best effort).
  * This provides backwards compatibility during transition.
  */
