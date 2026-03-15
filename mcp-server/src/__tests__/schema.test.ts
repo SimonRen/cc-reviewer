@@ -12,6 +12,7 @@ import {
   QuestionAnswer,
   getReviewOutputJsonSchema,
   parseReviewOutput,
+  isSubstantiveReview,
   PeerOutput,
   PeerInputSchema,
   getPeerOutputJsonSchema,
@@ -329,16 +330,16 @@ describe('QuestionAnswer Schema', () => {
 // =============================================================================
 
 describe('JSON Schema - New Fields', () => {
-  it('should include uncertainty_responses as required (OpenAI strict mode)', () => {
+  it('should define uncertainty_responses as a property (optional, not in required)', () => {
     const schema = getReviewOutputJsonSchema() as any;
     expect(schema.properties.uncertainty_responses).toBeDefined();
-    expect(schema.required).toContain('uncertainty_responses');
+    expect(schema.required).not.toContain('uncertainty_responses');
   });
 
-  it('should include question_answers as required (OpenAI strict mode)', () => {
+  it('should define question_answers as a property (optional, not in required)', () => {
     const schema = getReviewOutputJsonSchema() as any;
     expect(schema.properties.question_answers).toBeDefined();
-    expect(schema.required).toContain('question_answers');
+    expect(schema.required).not.toContain('question_answers');
   });
 
   it('should have correct structure for uncertainty_responses items', () => {
@@ -549,5 +550,72 @@ describe('parsePeerOutput', () => {
     expect(result!.key_points).toEqual([]);
     expect(result!.suggested_actions).toEqual([]);
     expect(result!.file_references).toEqual([]);
+  });
+});
+
+// =============================================================================
+// IS SUBSTANTIVE REVIEW TESTS
+// =============================================================================
+
+describe('isSubstantiveReview', () => {
+  it('should return false for completely empty review', () => {
+    const output = {
+      reviewer: 'codex',
+      findings: [],
+      agreements: [],
+      disagreements: [],
+      alternatives: [],
+      risk_assessment: { overall_level: 'medium' as const, score: 50, summary: '', top_concerns: [] },
+    };
+    expect(isSubstantiveReview(output as any)).toBe(false);
+  });
+
+  it('should return true when findings exist', () => {
+    const output = {
+      reviewer: 'codex',
+      findings: [{ id: 'f1', category: 'correctness' as const, severity: 'medium' as const, confidence: 0.8, title: 'Bug', description: 'desc' }],
+      agreements: [],
+      disagreements: [],
+      alternatives: [],
+      risk_assessment: { overall_level: 'medium' as const, score: 50, summary: '', top_concerns: [] },
+    };
+    expect(isSubstantiveReview(output as any)).toBe(true);
+  });
+
+  it('should return true when disagreements exist', () => {
+    const output = {
+      reviewer: 'codex',
+      findings: [],
+      agreements: [],
+      disagreements: [{ original_claim: 'x', issue: 'incorrect' as const, confidence: 0.8, reason: 'wrong' }],
+      alternatives: [],
+      risk_assessment: { overall_level: 'medium' as const, score: 50, summary: '', top_concerns: [] },
+    };
+    expect(isSubstantiveReview(output as any)).toBe(true);
+  });
+
+  it('should return true when risk assessment is non-default', () => {
+    const output = {
+      reviewer: 'codex',
+      findings: [],
+      agreements: [],
+      disagreements: [],
+      alternatives: [],
+      risk_assessment: { overall_level: 'high' as const, score: 75, summary: 'serious', top_concerns: ['x'] },
+    };
+    expect(isSubstantiveReview(output as any)).toBe(true);
+  });
+
+  it('should return true when uncertainty_responses exist', () => {
+    const output = {
+      reviewer: 'codex',
+      findings: [],
+      agreements: [],
+      disagreements: [],
+      alternatives: [],
+      uncertainty_responses: [{ uncertainty_index: 1, verified: true, finding: 'confirmed' }],
+      risk_assessment: { overall_level: 'medium' as const, score: 50, summary: '', top_concerns: [] },
+    };
+    expect(isSubstantiveReview(output as any)).toBe(true);
   });
 });
