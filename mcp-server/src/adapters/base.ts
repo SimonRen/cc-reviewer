@@ -6,7 +6,7 @@
  * changing the core orchestration logic.
  */
 
-import { ReviewOutput, ReviewFinding, PeerOutput } from '../schema.js';
+// Schema types no longer used — adapters return raw text, CC handles interpretation
 import { FocusArea, OutputType, ReasoningEffort, ServiceTier, TaskType } from '../types.js';
 
 // =============================================================================
@@ -166,8 +166,7 @@ export interface PeerRequest {
 
 export interface ReviewSuccess {
   success: true;
-  output: ReviewOutput;
-  rawOutput?: string; // Original output for debugging
+  output: string;  // Raw reviewer text — CC interprets it
   executionTimeMs: number;
 }
 
@@ -194,8 +193,7 @@ export interface ReviewError {
 
 export interface PeerSuccess {
   success: true;
-  output: PeerOutput;
-  rawOutput?: string;
+  output: string;  // Raw peer text — CC interprets it
   executionTimeMs: number;
 }
 
@@ -239,7 +237,7 @@ export interface ReviewerAdapter {
    */
   runPeerReview?(
     originalRequest: ReviewRequest,
-    reviewToScore: ReviewOutput
+    reviewToScore: string
   ): Promise<ReviewResult>;
 }
 

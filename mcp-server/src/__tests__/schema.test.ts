@@ -330,16 +330,16 @@ describe('QuestionAnswer Schema', () => {
 // =============================================================================
 
 describe('JSON Schema - New Fields', () => {
-  it('should define uncertainty_responses as a property (optional, not in required)', () => {
+  it('should define uncertainty_responses in required (OpenAI strict mode needs all properties in required)', () => {
     const schema = getReviewOutputJsonSchema() as any;
     expect(schema.properties.uncertainty_responses).toBeDefined();
-    expect(schema.required).not.toContain('uncertainty_responses');
+    expect(schema.required).toContain('uncertainty_responses');
   });
 
-  it('should define question_answers as a property (optional, not in required)', () => {
+  it('should define question_answers in required (OpenAI strict mode needs all properties in required)', () => {
     const schema = getReviewOutputJsonSchema() as any;
     expect(schema.properties.question_answers).toBeDefined();
-    expect(schema.required).not.toContain('question_answers');
+    expect(schema.required).toContain('question_answers');
   });
 
   it('should have correct structure for uncertainty_responses items', () => {

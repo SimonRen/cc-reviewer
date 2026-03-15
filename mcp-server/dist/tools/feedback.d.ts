@@ -1,9 +1,8 @@
 /**
- * MCP Tool Implementations
+ * MCP Tool Implementations — Review Tools
  *
- * Provides two levels of review:
- * 1. Single model review (codex_review, gemini_review)
- * 2. Multi-model parallel review (multi_review)
+ * Returns raw reviewer text to CC. No JSON parsing, no reformatting.
+ * CC handles interpretation and synthesis.
  */
 import { z } from 'zod';
 export declare const ReviewInputSchema: z.ZodObject<{
@@ -20,8 +19,8 @@ export declare const ReviewInputSchema: z.ZodObject<{
     ccOutput: string;
     outputType: "findings" | "analysis" | "plan" | "proposal";
     focusAreas?: ("performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation")[] | undefined;
-    customPrompt?: string | undefined;
     analyzedFiles?: string[] | undefined;
+    customPrompt?: string | undefined;
     reasoningEffort?: "high" | "xhigh" | undefined;
     serviceTier?: "default" | "fast" | "flex" | undefined;
 }, {
@@ -29,8 +28,8 @@ export declare const ReviewInputSchema: z.ZodObject<{
     ccOutput: string;
     outputType: "findings" | "analysis" | "plan" | "proposal";
     focusAreas?: ("performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation")[] | undefined;
-    customPrompt?: string | undefined;
     analyzedFiles?: string[] | undefined;
+    customPrompt?: string | undefined;
     reasoningEffort?: "high" | "xhigh" | undefined;
     serviceTier?: "default" | "fast" | "flex" | undefined;
 }>;

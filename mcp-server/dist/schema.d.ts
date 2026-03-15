@@ -76,8 +76,8 @@ export declare const ReviewFinding: z.ZodObject<{
         column_start?: number | undefined;
         column_end?: number | undefined;
     } | undefined;
-    evidence?: string | undefined;
     suggestion?: string | undefined;
+    evidence?: string | undefined;
     cwe_id?: string | undefined;
     owasp_category?: string | undefined;
     tags?: string[] | undefined;
@@ -95,8 +95,8 @@ export declare const ReviewFinding: z.ZodObject<{
         column_start?: number | undefined;
         column_end?: number | undefined;
     } | undefined;
-    evidence?: string | undefined;
     suggestion?: string | undefined;
+    evidence?: string | undefined;
     cwe_id?: string | undefined;
     owasp_category?: string | undefined;
     tags?: string[] | undefined;
@@ -279,8 +279,8 @@ export declare const ReviewOutput: z.ZodObject<{
             column_start?: number | undefined;
             column_end?: number | undefined;
         } | undefined;
-        evidence?: string | undefined;
         suggestion?: string | undefined;
+        evidence?: string | undefined;
         cwe_id?: string | undefined;
         owasp_category?: string | undefined;
         tags?: string[] | undefined;
@@ -298,8 +298,8 @@ export declare const ReviewOutput: z.ZodObject<{
             column_start?: number | undefined;
             column_end?: number | undefined;
         } | undefined;
-        evidence?: string | undefined;
         suggestion?: string | undefined;
+        evidence?: string | undefined;
         cwe_id?: string | undefined;
         owasp_category?: string | undefined;
         tags?: string[] | undefined;
@@ -444,8 +444,8 @@ export declare const ReviewOutput: z.ZodObject<{
             column_start?: number | undefined;
             column_end?: number | undefined;
         } | undefined;
-        evidence?: string | undefined;
         suggestion?: string | undefined;
+        evidence?: string | undefined;
         cwe_id?: string | undefined;
         owasp_category?: string | undefined;
         tags?: string[] | undefined;
@@ -512,8 +512,8 @@ export declare const ReviewOutput: z.ZodObject<{
             column_start?: number | undefined;
             column_end?: number | undefined;
         } | undefined;
-        evidence?: string | undefined;
         suggestion?: string | undefined;
+        evidence?: string | undefined;
         cwe_id?: string | undefined;
         owasp_category?: string | undefined;
         tags?: string[] | undefined;

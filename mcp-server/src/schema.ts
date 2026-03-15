@@ -203,7 +203,7 @@ export function getReviewOutputJsonSchema(): object {
   return {
     type: 'object',
     additionalProperties: false,
-    required: ['reviewer', 'findings', 'risk_assessment'],
+    required: ['reviewer', 'findings', 'agreements', 'disagreements', 'alternatives', 'risk_assessment', 'uncertainty_responses', 'question_answers'],
     properties: {
       reviewer: { type: 'string' },
       findings: {

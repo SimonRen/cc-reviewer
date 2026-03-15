@@ -55,6 +55,12 @@ export class CodexEventDecoder {
   // Token usage from the most recently seen turn.completed
   private _usage: CodexEvent['usage'] | null = null;
 
+  // Error message from error/turn.failed events
+  private _error: string | null = null;
+
+  // Count of events received (0 = possible rate limit / instant rejection)
+  private _eventCount = 0;
+
   // =============================================================================
   // PUBLIC API
   // =============================================================================
@@ -96,11 +102,28 @@ export class CodexEventDecoder {
     return this._usage;
   }
 
+  /**
+   * Returns the error message from `error` or `turn.failed` events, or `null`.
+   */
+  getError(): string | null {
+    return this._error;
+  }
+
+  /**
+   * Returns true if events were received but no agent_message was produced.
+   * Combined with a fast exit, this indicates rate limiting or instant rejection.
+   */
+  hasNoOutput(): boolean {
+    return this._eventCount > 0 && this._finalResponse === null;
+  }
+
   // =============================================================================
   // PRIVATE HELPERS
   // =============================================================================
 
   private _handleEvent(event: CodexEvent): void {
+    this._eventCount++;
+
     // Track the last agent_message text
     if (
       event.type === 'item.completed' &&
@@ -113,6 +136,18 @@ export class CodexEventDecoder {
     // Track usage from turn completion
     if (event.type === 'turn.completed' && event.usage != null) {
       this._usage = event.usage;
+    }
+
+    // Capture errors from error/turn.failed events
+    if (event.type === 'error') {
+      this._error = event.message || 'Unknown error from Codex';
+    }
+    if (event.type === 'turn.failed') {
+      this._error = event.error?.message || 'Turn failed';
+    }
+    // Capture error items (e.g. model errors reported as item.completed with type=error)
+    if (event.type === 'item.completed' && event.item?.type === 'error') {
+      this._error = event.item.message || event.item.text || 'Model error';
     }
 
     // Notify caller

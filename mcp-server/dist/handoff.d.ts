@@ -214,10 +214,10 @@ export declare function selectRole(focusAreas?: FocusArea[]): ReviewerRole;
 export interface PromptOptions {
     handoff: Handoff;
     role?: ReviewerRole;
-    outputFormat: 'json' | 'markdown' | 'schema-enforced';
 }
 /**
- * Build the review prompt using minimal, targeted context
+ * Build the review prompt using minimal, targeted context.
+ * No output format constraints — reviewer responds naturally, CC interprets.
  */
 export declare function buildHandoffPrompt(options: PromptOptions): string;
 /**
@@ -237,10 +237,9 @@ export interface PeerPromptOptions {
     context?: string;
     focusAreas?: FocusArea[];
     customInstructions?: string;
-    outputFormat: 'json' | 'schema-enforced';
 }
 /**
  * Build a prompt for general-purpose peer assistance (not review).
- * The peer acts as a collaborative coworker, not a critic.
+ * No output format constraints — peer responds naturally, CC interprets.
  */
 export declare function buildPeerPrompt(options: PeerPromptOptions): string;

@@ -6,7 +6,6 @@
  * 2. ask_gemini - Ask Gemini for help
  * 3. ask_multi - Ask both in parallel
  */
-import { PeerResult } from '../adapters/index.js';
 export type PeerInput = {
     workingDir: string;
     prompt: string;
@@ -18,7 +17,6 @@ export type PeerInput = {
     reasoningEffort?: 'high' | 'xhigh';
     serviceTier?: 'default' | 'fast' | 'flex';
 };
-export declare function formatPeerResponse(result: PeerResult, modelName: string): string;
 export declare function handleAskCodex(input: PeerInput): Promise<{
     content: Array<{
         type: 'text';

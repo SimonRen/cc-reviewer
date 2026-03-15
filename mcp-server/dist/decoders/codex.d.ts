@@ -42,6 +42,8 @@ export declare class CodexEventDecoder {
     onProgress?: (eventType: string, detail?: string) => void;
     private _finalResponse;
     private _usage;
+    private _error;
+    private _eventCount;
     /**
      * Parse a single JSONL line. Silently skips malformed or empty input.
      */
@@ -56,5 +58,14 @@ export declare class CodexEventDecoder {
      * `null` if no such event has been seen.
      */
     getUsage(): CodexEvent['usage'] | null;
+    /**
+     * Returns the error message from `error` or `turn.failed` events, or `null`.
+     */
+    getError(): string | null;
+    /**
+     * Returns true if events were received but no agent_message was produced.
+     * Combined with a fast exit, this indicates rate limiting or instant rejection.
+     */
+    hasNoOutput(): boolean;
     private _handleEvent;
 }

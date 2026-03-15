@@ -154,10 +154,11 @@ export function selectRole(focusAreas) {
     return CHANGE_FOCUSED_REVIEWER;
 }
 /**
- * Build the review prompt using minimal, targeted context
+ * Build the review prompt using minimal, targeted context.
+ * No output format constraints — reviewer responds naturally, CC interprets.
  */
 export function buildHandoffPrompt(options) {
-    const { handoff, outputFormat } = options;
+    const { handoff } = options;
     const role = options.role || selectRole(handoff.focusAreas);
     const sections = [];
     // SECTION 1: ROLE
@@ -197,38 +198,6 @@ ${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**
     if (handoff.priorityFiles && handoff.priorityFiles.length > 0) {
         sections.push(`## PRIORITY FILES\n\n${handoff.priorityFiles.map(f => `- \`${f}\``).join('\n')}`);
     }
-    // SECTION 7: OUTPUT FORMAT
-    if (outputFormat === 'schema-enforced') {
-        sections.push(`## OUTPUT FORMAT
-Respond with valid JSON matching the schema. Confidence reflects YOUR certainty.`);
-    }
-    else if (outputFormat === 'json') {
-        sections.push(`## OUTPUT FORMAT
-Respond with valid JSON:
-\`\`\`json
-{
-  "findings": [{
-    "id": "string",
-    "category": "security|performance|correctness|architecture|other",
-    "severity": "critical|high|medium|low|info",
-    "confidence": 0.0-1.0,
-    "title": "string",
-    "description": "string",
-    "location": { "file": "string", "line_start": 0 },
-    "evidence": "code snippet",
-    "suggestion": "string"
-  }],
-  "uncertainty_responses": [{"uncertainty_index": 0, "verified": true, "finding": "string", "recommendation": "string"}],
-  "question_answers": [{"question_index": 0, "answer": "string", "confidence": 0.0-1.0}],
-  "agreements": ["string"],
-  "risk_assessment": { "level": "critical|high|medium|low|minimal", "summary": "string" }
-}
-\`\`\``);
-    }
-    else {
-        sections.push(`## OUTPUT FORMAT
-Structure: ## Findings, ## Uncertainty Responses, ## Question Answers, ## Agreements, ## Risk Assessment.`);
-    }
     return sections.join('\n\n');
 }
 // =============================================================================
@@ -260,10 +229,10 @@ export function enhanceHandoff(handoff, uncertainties, questions, decisions) {
 }
 /**
  * Build a prompt for general-purpose peer assistance (not review).
- * The peer acts as a collaborative coworker, not a critic.
+ * No output format constraints — peer responds naturally, CC interprets.
  */
 export function buildPeerPrompt(options) {
-    const { workingDir, prompt, taskType, relevantFiles, context, focusAreas, customInstructions, outputFormat } = options;
+    const { workingDir, prompt, taskType, relevantFiles, context, focusAreas, customInstructions } = options;
     const role = selectRole(focusAreas);
     const sections = [];
     // SECTION 1: ROLE
@@ -287,27 +256,6 @@ Be direct and actionable.`);
     // SECTION 5: CUSTOM INSTRUCTIONS
     if (customInstructions) {
         sections.push(`## ADDITIONAL INSTRUCTIONS\n\n${customInstructions}`);
-    }
-    // SECTION 6: OUTPUT FORMAT
-    if (outputFormat === 'schema-enforced') {
-        sections.push(`## OUTPUT FORMAT
-Respond with valid JSON matching the schema. Confidence reflects YOUR certainty.`);
-    }
-    else {
-        sections.push(`## OUTPUT FORMAT
-Respond with valid JSON:
-\`\`\`json
-{
-  "responder": "string",
-  "answer": "markdown",
-  "confidence": 0.0-1.0,
-  "key_points": ["string"],
-  "suggested_actions": [{ "action": "string", "priority": "high|medium|low", "file": "string", "rationale": "string" }],
-  "file_references": [{ "path": "string", "lines": "string", "relevance": "string" }],
-  "alternatives": [{ "topic": "string", "current_approach": "string", "alternative": "string", "tradeoffs": { "pros": [], "cons": [] }, "recommendation": "string" }],
-  "execution_notes": "string"
-}
-\`\`\``);
     }
     return sections.join('\n\n');
 }

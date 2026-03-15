@@ -2,13 +2,12 @@
  * Codex CLI Adapter
  *
  * Implements the ReviewerAdapter interface for OpenAI's Codex CLI.
- * Specializes in correctness, edge cases, and performance analysis.
+ * Returns raw text — no JSON parsing or schema enforcement.
+ * CC handles interpretation of the reviewer's response.
  */
 
 import { spawn } from 'child_process';
-import { existsSync, writeFileSync, unlinkSync, mkdtempSync } from 'fs';
-import { tmpdir } from 'os';
-import { join } from 'path';
+import { existsSync } from 'fs';
 import {
   ReviewerAdapter,
   ReviewerCapabilities,
@@ -19,7 +18,6 @@ import {
   PeerResult,
   registerAdapter,
 } from './base.js';
-import { parseReviewOutput, parseLegacyMarkdownOutput, getReviewOutputJsonSchema, getPeerOutputJsonSchema, parsePeerOutput, isSubstantiveReview } from '../schema.js';
 import { CliExecutor } from '../executor.js';
 import { CodexEventDecoder } from '../decoders/index.js';
 import {
@@ -40,7 +38,6 @@ const COLD_START_TIMEOUT_MS: Record<string, number> = {
 };
 const STREAMING_TIMEOUT_MS = 90_000;  // 90s — if events stop mid-stream
 const MAX_TIMEOUT_MS = 3_600_000;     // 60 min absolute max
-const MAX_RETRIES = 2;
 const MAX_BUFFER_SIZE = 1024 * 1024;  // 1MB max buffer
 
 // =============================================================================
@@ -57,7 +54,7 @@ export class CodexAdapter implements ReviewerAdapter {
       strengths: ['correctness', 'performance', 'security', 'testing'],
       weaknesses: ['documentation'],
       hasFilesystemAccess: true,
-      supportsStructuredOutput: true,
+      supportsStructuredOutput: false,
       maxContextTokens: 128000,
       reasoningLevels: ['high', 'xhigh'],
     };
@@ -68,226 +65,53 @@ export class CodexAdapter implements ReviewerAdapter {
       const proc = spawn('codex', ['--version'], {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
-
-      proc.on('close', (code) => {
-        resolve(code === 0);
-      });
-
-      proc.on('error', () => {
-        resolve(false);
-      });
-
-      // Timeout after 5s
-      setTimeout(() => {
-        proc.kill();
-        resolve(false);
-      }, 5000);
+      proc.on('close', (code) => resolve(code === 0));
+      proc.on('error', () => resolve(false));
+      setTimeout(() => { proc.kill(); resolve(false); }, 5000);
     });
   }
 
   async runReview(request: ReviewRequest): Promise<ReviewResult> {
     const startTime = Date.now();
 
-    // Validate working directory
     if (!existsSync(request.workingDir)) {
       return {
         success: false,
-        error: {
-          type: 'cli_error',
-          message: `Working directory does not exist: ${request.workingDir}`,
-        },
+        error: { type: 'cli_error', message: `Working directory does not exist: ${request.workingDir}` },
         suggestion: 'Check that the working directory path is correct',
         executionTimeMs: Date.now() - startTime,
       };
     }
 
-    return this.runWithRetry(request, 0, startTime);
-  }
-
-  private async runWithRetry(
-    request: ReviewRequest,
-    attempt: number,
-    startTime: number,
-    previousError?: string,
-    previousOutput?: string
-  ): Promise<ReviewResult> {
     try {
-      // Build the prompt using handoff protocol
       const handoff = buildSimpleHandoff(
-        request.workingDir,
-        request.ccOutput,
-        request.analyzedFiles,
-        request.focusAreas,
-        request.customPrompt
+        request.workingDir, request.ccOutput,
+        request.analyzedFiles, request.focusAreas, request.customPrompt
       );
-
-      // Select role based on focus areas
       const role = selectRole(request.focusAreas as FocusArea[] | undefined);
+      const prompt = buildHandoffPrompt({ handoff, role });
 
-      // Build prompt with retry context if needed
-      // Use 'schema-enforced' since Codex gets --output-schema flag (avoids redundant inline JSON template)
-      let prompt = buildHandoffPrompt({
-        handoff,
-        role,
-        outputFormat: 'schema-enforced',
-      });
+      const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', request.serviceTier);
 
-      // Add retry context if this is a retry attempt
-      if (attempt > 0) {
-        prompt += `\n\n---\n\n# RETRY ATTEMPT ${attempt + 1}\n\n` +
-          `Previous output had issues: ${previousError}\n` +
-          `Please fix these issues and provide valid JSON output.\n` +
-          (previousOutput ? `\nPrevious output (for reference):\n${previousOutput.slice(0, 500)}...` : '');
-      }
-
-      // Run the CLI
-      const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getReviewOutputJsonSchema, request.serviceTier);
-
-      // Handle CLI errors
       if (result.exitCode !== 0) {
         const error = this.categorizeError(result.stderr);
+        return { success: false, error, suggestion: this.getSuggestion(error), executionTimeMs: Date.now() - startTime };
+      }
+
+      if (!result.stdout.trim()) {
         return {
           success: false,
-          error,
-          suggestion: this.getSuggestion(error),
-          rawOutput: result.stderr,
+          error: { type: 'cli_error', message: 'Codex returned empty response' },
+          suggestion: 'Try again or use /gemini instead',
           executionTimeMs: Date.now() - startTime,
         };
       }
 
-      // Handle buffer truncation
-      if (result.truncated) {
-        return {
-          success: false,
-          error: {
-            type: 'cli_error',
-            message: 'Output exceeded maximum buffer size (1MB) and was truncated',
-          },
-          suggestion: 'Try reviewing a smaller scope with --focus',
-          executionTimeMs: Date.now() - startTime,
-        };
-      }
-
-      // Parse the output
-      let output = parseReviewOutput(result.stdout);
-      let usedFallback = false;
-
-      // If JSON parsing fails, try legacy markdown
-      if (!output) {
-        output = parseLegacyMarkdownOutput(result.stdout, 'codex');
-        usedFallback = true;
-      }
-
-      // If no valid output, retry or fail
-      if (!output) {
-        if (attempt < MAX_RETRIES) {
-          return this.runWithRetry(
-            request,
-            attempt + 1,
-            startTime,
-            'Output did not match expected JSON schema',
-            result.stdout
-          );
-        }
-
-        return {
-          success: false,
-          error: {
-            type: 'parse_error',
-            message: 'Failed to parse reviewer output after retries',
-            details: { rawOutput: result.stdout.slice(0, 1000) },
-          },
-          suggestion: 'The model may not be following the output format. Try a different focus area.',
-          rawOutput: result.stdout,
-          executionTimeMs: Date.now() - startTime,
-        };
-      }
-
-      // Check for empty/minimal output — centralized substance check
-      if (!isSubstantiveReview(output)) {
-        if (attempt < MAX_RETRIES) {
-          console.error(`[codex] Received empty output, retrying...`);
-          return this.runWithRetry(
-            request,
-            attempt + 1,
-            startTime,
-            usedFallback
-              ? 'Received markdown output instead of JSON. Please provide valid JSON output.'
-              : 'Output contained no substantive review content. Please provide findings or analysis.',
-            result.stdout
-          );
-        }
-
-        return {
-          success: false,
-          error: {
-            type: 'parse_error',
-            message: 'Reviewer returned empty output after retries',
-            details: { rawOutput: result.stdout.slice(0, 1000) },
-          },
-          suggestion: 'The model returned no substantive review. Try a different focus area.',
-          rawOutput: result.stdout,
-          executionTimeMs: Date.now() - startTime,
-        };
-      }
-
-      return {
-        success: true,
-        output,
-        rawOutput: result.stdout,
-        executionTimeMs: Date.now() - startTime,
-      };
-
+      return { success: true, output: result.stdout, executionTimeMs: Date.now() - startTime };
     } catch (error) {
-      const err = error as Error & { code?: string };
-
-      if (err.code === 'ENOENT') {
-        return {
-          success: false,
-          error: {
-            type: 'cli_not_found',
-            message: 'Codex CLI not found',
-          },
-          suggestion: 'Install with: npm install -g @openai/codex',
-          executionTimeMs: Date.now() - startTime,
-        };
-      }
-
-      if (err.message === 'TIMEOUT') {
-        return {
-          success: false,
-          error: {
-            type: 'timeout',
-            message: 'No output for 2 minutes - process may be hung',
-          },
-          suggestion: 'Try a smaller scope or use --focus',
-          executionTimeMs: Date.now() - startTime,
-        };
-      }
-
-      if (err.message === 'MAX_TIMEOUT') {
-        return {
-          success: false,
-          error: {
-            type: 'timeout',
-            message: 'Task exceeded 60 minute maximum',
-          },
-          suggestion: 'Try a smaller scope',
-          executionTimeMs: Date.now() - startTime,
-        };
-      }
-
-      return {
-        success: false,
-        error: {
-          type: 'cli_error',
-          message: err.message,
-        },
-        executionTimeMs: Date.now() - startTime,
-      };
+      return this.handleException(error, startTime);
     }
   }
-
 
   async runPeerRequest(request: PeerRequest): Promise<PeerResult> {
     const startTime = Date.now();
@@ -295,28 +119,14 @@ export class CodexAdapter implements ReviewerAdapter {
     if (!existsSync(request.workingDir)) {
       return {
         success: false,
-        error: {
-          type: 'cli_error',
-          message: `Working directory does not exist: ${request.workingDir}`,
-        },
+        error: { type: 'cli_error', message: `Working directory does not exist: ${request.workingDir}` },
         suggestion: 'Check that the working directory path is correct',
         executionTimeMs: Date.now() - startTime,
       };
     }
 
-    return this.runPeerWithRetry(request, 0, startTime);
-  }
-
-  private async runPeerWithRetry(
-    request: PeerRequest,
-    attempt: number,
-    startTime: number,
-    previousError?: string,
-    previousOutput?: string
-  ): Promise<PeerResult> {
     try {
-      // Use 'schema-enforced' since Codex gets --output-schema flag (avoids redundant inline JSON template)
-      let prompt = buildPeerPrompt({
+      const prompt = buildPeerPrompt({
         workingDir: request.workingDir,
         prompt: request.prompt,
         taskType: request.taskType,
@@ -324,77 +134,27 @@ export class CodexAdapter implements ReviewerAdapter {
         context: request.context,
         focusAreas: request.focusAreas,
         customInstructions: request.customPrompt,
-        outputFormat: 'schema-enforced',
       });
 
-      if (attempt > 0) {
-        prompt += `\n\n---\n\n# RETRY ATTEMPT ${attempt + 1}\n\n` +
-          `Previous output had issues: ${previousError}\n` +
-          `Please fix these issues and provide valid JSON output.\n` +
-          (previousOutput ? `\nPrevious output (for reference):\n${previousOutput.slice(0, 500)}...` : '');
-      }
-
-      const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', getPeerOutputJsonSchema, request.serviceTier);
+      const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', request.serviceTier);
 
       if (result.exitCode !== 0) {
         const error = this.categorizeError(result.stderr);
+        return { success: false, error, suggestion: this.getSuggestion(error), executionTimeMs: Date.now() - startTime };
+      }
+
+      if (!result.stdout.trim()) {
         return {
           success: false,
-          error,
-          suggestion: this.getSuggestion(error),
-          rawOutput: result.stderr,
+          error: { type: 'cli_error', message: 'Codex returned empty response' },
+          suggestion: 'Try again or use /ask-gemini instead',
           executionTimeMs: Date.now() - startTime,
         };
       }
 
-      if (result.truncated) {
-        return {
-          success: false,
-          error: { type: 'cli_error', message: 'Output exceeded maximum buffer size (1MB)' },
-          suggestion: 'Try a more focused request',
-          executionTimeMs: Date.now() - startTime,
-        };
-      }
-
-      const output = parsePeerOutput(result.stdout);
-
-      if (!output) {
-        if (attempt < MAX_RETRIES) {
-          return this.runPeerWithRetry(request, attempt + 1, startTime,
-            'Output did not match expected JSON schema', result.stdout);
-        }
-        return {
-          success: false,
-          error: { type: 'parse_error', message: 'Failed to parse peer output after retries',
-            details: { rawOutput: result.stdout.slice(0, 1000) } },
-          suggestion: 'The model may not be following the output format.',
-          rawOutput: result.stdout,
-          executionTimeMs: Date.now() - startTime,
-        };
-      }
-
-      return {
-        success: true,
-        output,
-        rawOutput: result.stdout,
-        executionTimeMs: Date.now() - startTime,
-      };
+      return { success: true, output: result.stdout, executionTimeMs: Date.now() - startTime };
     } catch (error) {
-      const err = error as Error & { code?: string };
-      if (err.code === 'ENOENT') {
-        return { success: false, error: { type: 'cli_not_found', message: 'Codex CLI not found' },
-          suggestion: 'Install with: npm install -g @openai/codex', executionTimeMs: Date.now() - startTime };
-      }
-      if (err.message === 'TIMEOUT') {
-        return { success: false, error: { type: 'timeout', message: 'No output for 2 minutes' },
-          suggestion: 'Try a simpler request', executionTimeMs: Date.now() - startTime };
-      }
-      if (err.message === 'MAX_TIMEOUT') {
-        return { success: false, error: { type: 'timeout', message: 'Task exceeded 60 minute maximum' },
-          suggestion: 'Try a smaller scope', executionTimeMs: Date.now() - startTime };
-      }
-      return { success: false, error: { type: 'cli_error', message: err.message },
-        executionTimeMs: Date.now() - startTime };
+      return this.handleException(error, startTime);
     }
   }
 
@@ -402,21 +162,8 @@ export class CodexAdapter implements ReviewerAdapter {
     prompt: string,
     workingDir: string,
     reasoningEffort: 'high' | 'xhigh',
-    schemaGetter: () => object,
     serviceTier?: string
   ): Promise<{ stdout: string; stderr: string; exitCode: number; truncated: boolean }> {
-    // Create temp schema file for structured output
-    let schemaFile: string | null = null;
-    try {
-      const tempDir = mkdtempSync(join(tmpdir(), 'codex-schema-'));
-      schemaFile = join(tempDir, 'schema.json');
-      const schema = schemaGetter();
-      writeFileSync(schemaFile, JSON.stringify(schema, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('[codex] Warning: Failed to create schema file:', err);
-      schemaFile = null;
-    }
-
     const args = [
       'exec',
       '--json',  // JSONL streaming events
@@ -426,24 +173,19 @@ export class CodexAdapter implements ReviewerAdapter {
       '--dangerously-bypass-approvals-and-sandbox',
       '--skip-git-repo-check',
       '-C', workingDir,
+      '-',  // Read prompt from stdin
     ];
 
     if (serviceTier && serviceTier !== 'default') {
       args.push('-c', `service_tier=${serviceTier}`);
     }
 
-    if (schemaFile) {
-      args.push('--output-schema', schemaFile);
-    }
-
-    args.push('-');  // Read prompt from stdin
-
     const decoder = new CodexEventDecoder();
     const cliStartTime = Date.now();
     let firstEventReceived = false;
 
     const tierLabel = serviceTier && serviceTier !== 'default' ? ` [${serviceTier}]` : '';
-    console.error(`[codex] Running review with ${reasoningEffort} reasoning${tierLabel}...`);
+    console.error(`[codex] Running with ${reasoningEffort} reasoning${tierLabel}...`);
 
     decoder.onProgress = (eventType, detail) => {
       const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
@@ -461,8 +203,6 @@ export class CodexAdapter implements ReviewerAdapter {
       maxBufferSize: MAX_BUFFER_SIZE,
       onLine: (line: string) => {
         decoder.processLine(line);
-
-        // Phase transition: tighten timeout after first event
         if (!firstEventReceived) {
           firstEventReceived = true;
           executor.setInactivityTimeout(STREAMING_TIMEOUT_MS);
@@ -470,74 +210,70 @@ export class CodexAdapter implements ReviewerAdapter {
       },
     });
 
-    try {
-      const result = await executor.run();
+    const result = await executor.run();
+    const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
+    console.error(`[codex] ✓ complete (${elapsed}s)`);
 
-      const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
-      console.error(`[codex] ✓ complete (${elapsed}s)`);
-
-      const finalResponse = decoder.getFinalResponse();
-
-      return {
-        stdout: finalResponse || result.rawStdout,
-        stderr: result.stderr,
-        exitCode: result.exitCode,
-        truncated: result.truncated,
-      };
-    } finally {
-      if (schemaFile) {
-        try { unlinkSync(schemaFile); } catch { /* ignore */ }
-      }
+    // Check for errors captured from JSONL events
+    const decoderError = decoder.getError();
+    if (decoderError) {
+      return { stdout: '', stderr: decoderError, exitCode: 1, truncated: false };
     }
+
+    const finalResponse = decoder.getFinalResponse();
+    if (!finalResponse && decoder.hasNoOutput()) {
+      return { stdout: '', stderr: 'No response from Codex — possible rate limit or model rejection', exitCode: 1, truncated: false };
+    }
+
+    return {
+      stdout: finalResponse || result.rawStdout,
+      stderr: result.stderr,
+      exitCode: result.exitCode,
+      truncated: result.truncated,
+    };
+  }
+
+  private handleException(error: unknown, startTime: number): ReviewResult | PeerResult {
+    const err = error as Error & { code?: string };
+    if (err.code === 'ENOENT') {
+      return { success: false, error: { type: 'cli_not_found', message: 'Codex CLI not found' },
+        suggestion: 'Install with: npm install -g @openai/codex', executionTimeMs: Date.now() - startTime };
+    }
+    if (err.message === 'TIMEOUT') {
+      return { success: false, error: { type: 'timeout', message: 'Codex timed out — no events received' },
+        suggestion: 'Try a smaller scope or use /gemini', executionTimeMs: Date.now() - startTime };
+    }
+    if (err.message === 'MAX_TIMEOUT') {
+      return { success: false, error: { type: 'timeout', message: 'Task exceeded 60 minute maximum' },
+        suggestion: 'Try a smaller scope', executionTimeMs: Date.now() - startTime };
+    }
+    return { success: false, error: { type: 'cli_error', message: err.message }, executionTimeMs: Date.now() - startTime };
   }
 
   private categorizeError(stderr: string): ReviewError {
     const lower = stderr.toLowerCase();
-
-    if (lower.includes('rate limit')) {
-      return {
-        type: 'rate_limit',
-        message: 'Rate limit exceeded',
-        details: { retryAfterMs: this.parseRetryAfter(stderr) },
-      };
+    if (lower.includes('rate limit') || lower.includes('possible rate limit') || lower.includes('no response from codex')) {
+      return { type: 'rate_limit', message: 'Codex rate limit — no tokens available' };
     }
-
-    if (lower.includes('unauthorized') || lower.includes('authentication') ||
-        stderr.includes('401') || stderr.includes('403')) {
-      return {
-        type: 'auth_error',
-        message: 'Authentication failed',
-        details: { stderr },
-      };
+    if (lower.includes('unauthorized') || lower.includes('authentication') || stderr.includes('401') || stderr.includes('403')) {
+      return { type: 'auth_error', message: 'Authentication failed', details: { stderr } };
     }
-
-    return {
-      type: 'cli_error',
-      message: stderr || 'Unknown error',
-    };
+    if (lower.includes('invalid_json_schema') || lower.includes('invalid_request_error')) {
+      return { type: 'cli_error', message: `API error: ${stderr.slice(0, 300)}` };
+    }
+    return { type: 'cli_error', message: stderr || 'Unknown error' };
   }
 
   private getSuggestion(error: ReviewError): string {
     switch (error.type) {
-      case 'rate_limit':
-        return 'Wait and retry, or use /gemini instead';
-      case 'auth_error':
-        return 'Run `codex login` to authenticate';
-      case 'cli_not_found':
-        return 'Install with: npm install -g @openai/codex';
-      default:
-        return 'Check the error message and try again';
+      case 'rate_limit': return 'Wait and retry, or use /gemini instead';
+      case 'auth_error': return 'Run `codex login` to authenticate';
+      case 'cli_not_found': return 'Install with: npm install -g @openai/codex';
+      default: return 'Check the error message and try again';
     }
-  }
-
-  private parseRetryAfter(errorMessage: string): number | undefined {
-    const match = errorMessage.match(/retry[- ]?after[:\s]+(\d+)/i);
-    return match ? parseInt(match[1]) * 1000 : undefined;
   }
 }
 
 // Register the adapter
 registerAdapter(new CodexAdapter());
-
-// Export for direct use
 export const codexAdapter = new CodexAdapter();

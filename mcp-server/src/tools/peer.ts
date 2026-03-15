@@ -14,7 +14,7 @@ import {
   getAdapter,
   getAvailableAdapters,
 } from '../adapters/index.js';
-import { PeerOutput } from '../schema.js';
+// No schema imports — raw text output, CC interprets
 
 export type PeerInput = {
   workingDir: string;
@@ -46,90 +46,18 @@ function toPeerRequest(input: PeerInput): PeerRequest {
   };
 }
 
-export function formatPeerResponse(result: PeerResult, modelName: string): string {
+function formatPeerResult(result: PeerResult, modelName: string): string {
   if (!result.success) {
-    return formatPeerErrorResponse(result.error, result.suggestion);
-  }
-
-  const output = result.output;
-  const lines: string[] = [];
-
-  lines.push(`## ${modelName} Response\n`);
-  lines.push(`**Execution Time:** ${(result.executionTimeMs / 1000).toFixed(1)}s`);
-  lines.push(`**Confidence:** ${Math.round(output.confidence * 100)}%\n`);
-
-  // Main answer
-  lines.push(`### Answer\n`);
-  lines.push(output.answer);
-  lines.push('');
-
-  // Key points
-  if (output.key_points.length > 0) {
-    lines.push(`### Key Points\n`);
-    for (const point of output.key_points) {
-      lines.push(`- ${point}`);
-    }
-    lines.push('');
-  }
-
-  // Suggested actions
-  if (output.suggested_actions.length > 0) {
-    lines.push(`### Suggested Actions\n`);
-    const priorityEmoji: Record<string, string> = {
-      high: '🔴', medium: '🟡', low: '🟢',
+    const emoji: Record<string, string> = {
+      cli_not_found: '❌', timeout: '⏱️', rate_limit: '🚫',
+      auth_error: '🔐', cli_error: '❌',
     };
-    for (const action of output.suggested_actions) {
-      lines.push(`${priorityEmoji[action.priority] || '•'} **${action.action}**`);
-      if (action.file) {
-        lines.push(`  📍 ${action.file}`);
-      }
-      lines.push(`  ${action.rationale}`);
-      lines.push('');
-    }
+    let msg = `${emoji[result.error.type] || '❌'} **${result.error.type}**: ${result.error.message}`;
+    if (result.suggestion) msg += `\n\n💡 ${result.suggestion}`;
+    return msg;
   }
 
-  // File references
-  if (output.file_references.length > 0) {
-    lines.push(`### Files Examined\n`);
-    for (const ref of output.file_references) {
-      const loc = ref.lines ? `${ref.path}:${ref.lines}` : ref.path;
-      lines.push(`- \`${loc}\` — ${ref.relevance}`);
-    }
-    lines.push('');
-  }
-
-  // Alternatives
-  if (output.alternatives && output.alternatives.length > 0) {
-    lines.push(`### Alternatives\n`);
-    for (const alt of output.alternatives) {
-      lines.push(`**${alt.topic}**`);
-      lines.push(`  Current: ${alt.current_approach}`);
-      lines.push(`  Alternative: ${alt.alternative}`);
-      lines.push(`  Recommendation: ${alt.recommendation}`);
-      lines.push('');
-    }
-  }
-
-  return lines.join('\n');
-}
-
-function formatPeerErrorResponse(error: { type: string; message: string }, suggestion?: string): string {
-  const emoji: Record<string, string> = {
-    cli_not_found: '❌',
-    timeout: '⏱️',
-    rate_limit: '🚫',
-    auth_error: '🔐',
-    parse_error: '⚠️',
-    cli_error: '❌',
-  };
-
-  let response = `${emoji[error.type] || '❌'} **${error.type}**: ${error.message}`;
-
-  if (suggestion) {
-    response += `\n\n💡 ${suggestion}`;
-  }
-
-  return response;
+  return `## ${modelName} Response\n\n**Execution Time:** ${(result.executionTimeMs / 1000).toFixed(1)}s\n\n${result.output}`;
 }
 
 // =============================================================================
@@ -155,7 +83,7 @@ export async function handleAskCodex(input: PeerInput): Promise<{ content: Array
   const request = toPeerRequest(input);
   const result = await adapter.runPeerRequest(request);
 
-  return { content: [{ type: 'text', text: formatPeerResponse(result, 'Codex') }] };
+  return { content: [{ type: 'text', text: formatPeerResult(result, 'Codex') }] };
 }
 
 export async function handleAskGemini(input: PeerInput): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
@@ -177,7 +105,7 @@ export async function handleAskGemini(input: PeerInput): Promise<{ content: Arra
   const request = toPeerRequest(input);
   const result = await adapter.runPeerRequest(request);
 
-  return { content: [{ type: 'text', text: formatPeerResponse(result, 'Gemini') }] };
+  return { content: [{ type: 'text', text: formatPeerResult(result, 'Gemini') }] };
 }
 
 // =============================================================================
@@ -204,46 +132,19 @@ export async function handleAskMulti(input: PeerInput): Promise<{ content: Array
 
   const results = await Promise.all(promises);
 
-  const successful: { model: string; output: PeerOutput }[] = [];
-  const failed: { model: string; error: string }[] = [];
+  const lines: string[] = [];
+  const allFailed = results.every(r => !r.result.success);
+  const someFailed = results.some(r => !r.result.success);
+
+  if (allFailed) lines.push('## Multi-Model Response ❌ All Failed\n');
+  else if (someFailed) lines.push('## Multi-Model Response ⚠️ Partial Success\n');
+  else lines.push('## Multi-Model Response ✓\n');
+
+  lines.push(`**Models:** ${availableAdapters.map(a => a.id).join(', ')}\n`);
 
   for (const { adapter, result } of results) {
-    if (result.success) {
-      successful.push({ model: adapter.id, output: result.output });
-    } else {
-      failed.push({ model: adapter.id, error: result.error.message });
-    }
-  }
-
-  const lines: string[] = [];
-
-  if (failed.length === results.length) {
-    lines.push('## Multi-Model Response ❌ All Failed\n');
-  } else if (failed.length > 0) {
-    lines.push('## Multi-Model Response ⚠️ Partial Success\n');
-  } else {
-    lines.push('## Multi-Model Response ✓\n');
-  }
-
-  lines.push(`**Models:** ${availableAdapters.map(a => a.id).join(', ')}`);
-  lines.push('');
-
-  for (const { model, output } of successful) {
-    lines.push(`### ${model.charAt(0).toUpperCase() + model.slice(1)} Response\n`);
-    lines.push(formatPeerResponse({ success: true, output, executionTimeMs: 0 }, model));
+    lines.push(formatPeerResult(result, adapter.getCapabilities().name));
     lines.push('');
-  }
-
-  if (failed.length > 0) {
-    lines.push('### Failures\n');
-    for (const { model, error } of failed) {
-      lines.push(`**${model}:** ${error}`);
-    }
-    lines.push('');
-  }
-
-  if (successful.length > 1) {
-    lines.push(`---\n\n**Synthesis Instructions:**\n- Compare perspectives from each model\n- Note agreements and disagreements\n- Use your judgment to form a final answer`);
   }
 
   return { content: [{ type: 'text', text: lines.join('\n') }] };

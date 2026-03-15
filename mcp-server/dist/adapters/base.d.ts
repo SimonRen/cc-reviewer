@@ -5,7 +5,6 @@
  * Makes it easy to add new models (Ollama, Azure, etc.) without
  * changing the core orchestration logic.
  */
-import { ReviewOutput, PeerOutput } from '../schema.js';
 import { FocusArea, OutputType, ReasoningEffort, ServiceTier, TaskType } from '../types.js';
 export interface ReviewerCapabilities {
     /** Display name for this reviewer */
@@ -77,8 +76,7 @@ export interface PeerRequest {
 }
 export interface ReviewSuccess {
     success: true;
-    output: ReviewOutput;
-    rawOutput?: string;
+    output: string;
     executionTimeMs: number;
 }
 export interface ReviewFailure {
@@ -96,8 +94,7 @@ export interface ReviewError {
 }
 export interface PeerSuccess {
     success: true;
-    output: PeerOutput;
-    rawOutput?: string;
+    output: string;
     executionTimeMs: number;
 }
 export interface PeerFailure {
@@ -127,7 +124,7 @@ export interface ReviewerAdapter {
      * Optional: Run peer review of another model's output
      * Future capability - not currently implemented by any adapter
      */
-    runPeerReview?(originalRequest: ReviewRequest, reviewToScore: ReviewOutput): Promise<ReviewResult>;
+    runPeerReview?(originalRequest: ReviewRequest, reviewToScore: string): Promise<ReviewResult>;
 }
 export declare function registerAdapter(adapter: ReviewerAdapter): void;
 export declare function getAdapter(id: string): ReviewerAdapter | undefined;
