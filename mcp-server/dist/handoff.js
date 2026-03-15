@@ -76,7 +76,6 @@ export const COMPREHENSIVE_REVIEWER = {
     systemPrompt: `Senior staff engineer. Be skeptical — catch mistakes, don't rubber-stamp.
 Priority: correctness > security > performance > maintainability.
 Only report real issues with evidence.`,
-    reviewInstructions: '',
 };
 /**
  * Change-focused reviewer - specifically for reviewing diffs
@@ -89,7 +88,6 @@ export const CHANGE_FOCUSED_REVIEWER = {
     applicableFocusAreas: [],
     systemPrompt: `Change reviewer. Focus on: goal achievement, regressions, edge cases, side effects.
 Reference specific lines in the diff.`,
-    reviewInstructions: '',
 };
 /**
  * Specialized roles - when specific focus is requested
@@ -102,7 +100,6 @@ export const SECURITY_REVIEWER = {
     applicableFocusAreas: ['security'],
     systemPrompt: `Security auditor. Focus on injection, auth bypass, data exposure, input validation.
 Rate by exploitability + impact.`,
-    reviewInstructions: '',
 };
 export const PERFORMANCE_REVIEWER = {
     id: 'performance',
@@ -112,7 +109,6 @@ export const PERFORMANCE_REVIEWER = {
     applicableFocusAreas: ['performance', 'scalability'],
     systemPrompt: `Performance engineer. Focus on complexity (Big-O), N+1 queries, memory, blocking I/O.
 Provide complexity analysis and specific optimizations.`,
-    reviewInstructions: '',
 };
 export const ARCHITECTURE_REVIEWER = {
     id: 'architecture',
@@ -122,7 +118,6 @@ export const ARCHITECTURE_REVIEWER = {
     applicableFocusAreas: ['architecture', 'maintainability'],
     systemPrompt: `Software architect. Focus on SOLID, coupling/cohesion, abstractions, patterns.
 Suggest refactorings with specific patterns.`,
-    reviewInstructions: '',
 };
 export const CORRECTNESS_REVIEWER = {
     id: 'correctness',
@@ -132,7 +127,6 @@ export const CORRECTNESS_REVIEWER = {
     applicableFocusAreas: ['correctness', 'testing'],
     systemPrompt: `Correctness analyst. Focus on logic errors, edge cases, race conditions, error handling.
 Provide triggering inputs and expected vs actual behavior.`,
-    reviewInstructions: '',
 };
 // All roles indexed by ID
 export const ROLES = {
@@ -176,7 +170,7 @@ Review recent work in \`${handoff.workingDir}\`.
 **Summary:** ${handoff.summary}${handoff.confidence !== undefined && handoff.confidence < 0.9 ? `\n**CC Confidence:** ${Math.round(handoff.confidence * 100)}% — verify weak areas` : ''}`);
     // SECTION 3: CC'S UNCERTAINTIES
     if (handoff.uncertainties && handoff.uncertainties.length > 0) {
-        sections.push(`## CC'S UNCERTAINTIES - VERIFY THESE
+        sections.push(`## CC'S UNCERTAINTIES
 
 ${handoff.uncertainties.map((u, i) => `### ${i + 1}. ${u.topic} ${u.severity === 'critical' ? '⚠️' : ''}
 - **Question:** ${u.question}
@@ -206,7 +200,7 @@ ${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**
     // SECTION 7: OUTPUT FORMAT
     if (outputFormat === 'schema-enforced') {
         sections.push(`## OUTPUT FORMAT
-Respond with valid JSON matching the schema. Verify findings with evidence. Confidence reflects YOUR certainty.`);
+Respond with valid JSON matching the schema. Confidence reflects YOUR certainty.`);
     }
     else if (outputFormat === 'json') {
         sections.push(`## OUTPUT FORMAT
@@ -276,7 +270,7 @@ export function buildPeerPrompt(options) {
     sections.push(`# ROLE: ${role.name} — Peer Engineer
 
 ${role.systemPrompt}
-Collaborate with CC. Help with planning, debugging, or answering questions. Be direct and actionable.`);
+Be direct and actionable.`);
     // SECTION 2: TASK
     const taskLabel = taskType ? ` [${taskType.toUpperCase()}]` : '';
     sections.push(`## YOUR TASK${taskLabel}
@@ -297,7 +291,7 @@ Collaborate with CC. Help with planning, debugging, or answering questions. Be d
     // SECTION 6: OUTPUT FORMAT
     if (outputFormat === 'schema-enforced') {
         sections.push(`## OUTPUT FORMAT
-Respond with valid JSON matching the schema. Read files before making claims. Confidence reflects YOUR certainty.`);
+Respond with valid JSON matching the schema. Confidence reflects YOUR certainty.`);
     }
     else {
         sections.push(`## OUTPUT FORMAT

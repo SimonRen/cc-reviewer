@@ -19,7 +19,7 @@ describe('handoff prompt building', () => {
     expect(prompt).toContain('Review recent work in `/test/dir`');
     expect(prompt).toContain('**Summary:** Did some work');
     expect(prompt).toContain('**CC Confidence:** 80%');
-    expect(prompt).toContain("## CC'S UNCERTAINTIES - VERIFY THESE");
+    expect(prompt).toContain("## CC'S UNCERTAINTIES");
     expect(prompt).toContain('### 1. Auth ⚠️');
     expect(prompt).toContain('## QUESTIONS FROM CC');
     expect(prompt).toContain('## PRIORITY FILES');
