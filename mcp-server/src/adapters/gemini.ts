@@ -32,8 +32,7 @@ import {
 // CONFIGURATION
 // =============================================================================
 
-const COLD_START_TIMEOUT_MS = 300_000; // 5 min — waiting for first JSONL event
-const STREAMING_TIMEOUT_MS = 90_000;  // 90s — if events stop mid-stream
+const INACTIVITY_TIMEOUT_MS = 300_000; // 5 min — covers reasoning gaps between tool use
 const MAX_TIMEOUT_MS = 3_600_000;     // 60 min absolute max
 const MAX_BUFFER_SIZE = 1024 * 1024;  // 1MB max buffer
 
@@ -168,7 +167,6 @@ export class GeminiAdapter implements ReviewerAdapter {
 
     const decoder = new GeminiEventDecoder();
     const cliStartTime = Date.now();
-    let firstEventReceived = false;
 
     console.error('[gemini] Running...');
 
@@ -183,15 +181,11 @@ export class GeminiAdapter implements ReviewerAdapter {
       args,
       cwd: workingDir,
       stdin: prompt,
-      inactivityTimeoutMs: COLD_START_TIMEOUT_MS,
+      inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,
       maxTimeoutMs: MAX_TIMEOUT_MS,
       maxBufferSize: MAX_BUFFER_SIZE,
       onLine: (line: string) => {
         decoder.processLine(line);
-        if (!firstEventReceived) {
-          firstEventReceived = true;
-          executor.setInactivityTimeout(STREAMING_TIMEOUT_MS);
-        }
       },
     });
 

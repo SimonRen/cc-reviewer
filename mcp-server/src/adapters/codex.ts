@@ -32,11 +32,10 @@ import {
 // CONFIGURATION
 // =============================================================================
 
-const COLD_START_TIMEOUT_MS: Record<string, number> = {
-  high: 180_000,   // 3 min — waiting for first JSONL event
-  xhigh: 300_000,  // 5 min — xhigh thinks longer before first event
+const INACTIVITY_TIMEOUT_MS: Record<string, number> = {
+  high: 180_000,   // 3 min — covers reasoning gaps between tool use bursts
+  xhigh: 300_000,  // 5 min — xhigh has longer reasoning phases
 };
-const STREAMING_TIMEOUT_MS = 90_000;  // 90s — if events stop mid-stream
 const MAX_TIMEOUT_MS = 3_600_000;     // 60 min absolute max
 const MAX_BUFFER_SIZE = 1024 * 1024;  // 1MB max buffer
 
@@ -182,7 +181,6 @@ export class CodexAdapter implements ReviewerAdapter {
 
     const decoder = new CodexEventDecoder();
     const cliStartTime = Date.now();
-    let firstEventReceived = false;
 
     const tierLabel = serviceTier && serviceTier !== 'default' ? ` [${serviceTier}]` : '';
     console.error(`[codex] Running with ${reasoningEffort} reasoning${tierLabel}...`);
@@ -198,15 +196,11 @@ export class CodexAdapter implements ReviewerAdapter {
       args,
       cwd: workingDir,
       stdin: prompt,
-      inactivityTimeoutMs: COLD_START_TIMEOUT_MS[reasoningEffort] || COLD_START_TIMEOUT_MS.high,
+      inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS[reasoningEffort] || INACTIVITY_TIMEOUT_MS.high,
       maxTimeoutMs: MAX_TIMEOUT_MS,
       maxBufferSize: MAX_BUFFER_SIZE,
       onLine: (line: string) => {
         decoder.processLine(line);
-        if (!firstEventReceived) {
-          firstEventReceived = true;
-          executor.setInactivityTimeout(STREAMING_TIMEOUT_MS);
-        }
       },
     });
 
