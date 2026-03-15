@@ -110,10 +110,10 @@ export const COMPREHENSIVE_REVIEWER: ReviewerRole = {
   description: 'Systematic review across all dimensions, prioritizing high-impact issues',
   isGeneric: true,
   applicableFocusAreas: [],
-  systemPrompt: `Senior staff engineer code reviewer. Be skeptical — catch mistakes, don't rubber-stamp.
+  systemPrompt: `Senior staff engineer. Be skeptical — catch mistakes, don't rubber-stamp.
 Priority: correctness > security > performance > maintainability.
-Only report real issues with evidence. Skip theoretical concerns.`,
-  reviewInstructions: `\nUse git diff and file reading to review the changes. Verify claims with evidence.`,
+Review changes using git diff and file reading. Only report real issues with evidence.`,
+  reviewInstructions: '',
 };
 
 /**
@@ -125,9 +125,9 @@ export const CHANGE_FOCUSED_REVIEWER: ReviewerRole = {
   description: 'Focused on reviewing the delta - what changed and its implications',
   isGeneric: true,
   applicableFocusAreas: [],
-  systemPrompt: `Change reviewer. Focus on: does the change achieve its goal? Regressions? Unhandled edge cases? Side effects?
-Reference specific lines in the diff.`,
-  reviewInstructions: `\nUse git diff and file reading to review the changes. Verify claims with evidence.`,
+  systemPrompt: `Change reviewer. Focus on: goal achievement, regressions, edge cases, side effects.
+Reference specific lines in the diff. Use git diff and file reading to verify.`,
+  reviewInstructions: '',
 };
 
 /**
@@ -140,8 +140,8 @@ export const SECURITY_REVIEWER: ReviewerRole = {
   isGeneric: false,
   applicableFocusAreas: ['security'],
   systemPrompt: `Security auditor. Focus on injection, auth bypass, data exposure, input validation.
-Provide CWE IDs when applicable. Describe attack scenarios. Rate by exploitability + impact.`,
-  reviewInstructions: `\nUse git diff and file reading to review the changes. Verify claims with evidence.`,
+Rate by exploitability + impact. Use git diff and file reading to verify.`,
+  reviewInstructions: '',
 };
 
 export const PERFORMANCE_REVIEWER: ReviewerRole = {
@@ -150,9 +150,9 @@ export const PERFORMANCE_REVIEWER: ReviewerRole = {
   description: 'Performance and efficiency analysis',
   isGeneric: false,
   applicableFocusAreas: ['performance', 'scalability'],
-  systemPrompt: `Performance engineer. Focus on algorithmic complexity (Big-O), N+1 queries, memory leaks, blocking I/O.
-Provide complexity analysis and specific optimizations.`,
-  reviewInstructions: `\nUse git diff and file reading to review the changes. Verify claims with evidence.`,
+  systemPrompt: `Performance engineer. Focus on complexity (Big-O), N+1 queries, memory, blocking I/O.
+Provide complexity analysis and specific optimizations. Use git diff and file reading.`,
+  reviewInstructions: '',
 };
 
 export const ARCHITECTURE_REVIEWER: ReviewerRole = {
@@ -161,9 +161,9 @@ export const ARCHITECTURE_REVIEWER: ReviewerRole = {
   description: 'Design patterns, structure, and maintainability',
   isGeneric: false,
   applicableFocusAreas: ['architecture', 'maintainability'],
-  systemPrompt: `Software architect. Focus on SOLID violations, coupling/cohesion, wrong abstractions, pattern misuse.
-Suggest refactoring with specific patterns.`,
-  reviewInstructions: `\nUse git diff and file reading to review the changes. Verify claims with evidence.`,
+  systemPrompt: `Software architect. Focus on SOLID, coupling/cohesion, abstractions, patterns.
+Suggest refactorings. Use git diff and file reading to verify.`,
+  reviewInstructions: '',
 };
 
 export const CORRECTNESS_REVIEWER: ReviewerRole = {
@@ -172,9 +172,9 @@ export const CORRECTNESS_REVIEWER: ReviewerRole = {
   description: 'Logic errors, edge cases, and bug detection',
   isGeneric: false,
   applicableFocusAreas: ['correctness', 'testing'],
-  systemPrompt: `Correctness analyst. Focus on logic errors, off-by-one, null/undefined, race conditions, error handling gaps.
-Provide triggering inputs and expected vs actual behavior.`,
-  reviewInstructions: `\nUse git diff and file reading to review the changes. Verify claims with evidence.`,
+  systemPrompt: `Correctness analyst. Focus on logic errors, edge cases, race conditions, error handling.
+Provide triggering inputs. Use git diff and file reading to verify.`,
+  reviewInstructions: '',
 };
 
 // All roles indexed by ID
@@ -192,11 +192,9 @@ export const ROLES: Record<string, ReviewerRole> = {
  */
 export function selectRole(focusAreas?: FocusArea[]): ReviewerRole {
   if (!focusAreas || focusAreas.length === 0) {
-    // No focus specified - use comprehensive reviewer (NOT a weak fallback!)
     return COMPREHENSIVE_REVIEWER;
   }
 
-  // Find specialized role that matches
   for (const focus of focusAreas) {
     for (const role of Object.values(ROLES)) {
       if (!role.isGeneric && role.applicableFocusAreas.includes(focus)) {
@@ -205,7 +203,6 @@ export function selectRole(focusAreas?: FocusArea[]): ReviewerRole {
     }
   }
 
-  // No specialized match - use change-focused or comprehensive
   return CHANGE_FOCUSED_REVIEWER;
 }
 
@@ -228,204 +225,81 @@ export function buildHandoffPrompt(options: PromptOptions): string {
 
   const sections: string[] = [];
 
-  // ==========================================================================
   // SECTION 1: ROLE
-  // ==========================================================================
-  sections.push(`# ROLE: ${role.name}
+  sections.push(`# ROLE: ${role.name}\n\n${role.systemPrompt}`);
 
-${role.systemPrompt}`);
+  // SECTION 2: TASK
+  sections.push(`## YOUR TASK
 
-  // ==========================================================================
-  // SECTION 2: TASK + HOW TO REVIEW
-  // ==========================================================================
-  sections.push(`
----
+Review recent work in \`${handoff.workingDir}\`.
 
-# YOUR TASK
+**Summary:** ${handoff.summary}${handoff.confidence !== undefined && handoff.confidence < 0.9 ? `\n**CC Confidence:** ${Math.round(handoff.confidence * 100)}% — verify weak areas` : ''}`);
 
-Review Claude Code's (CC) recent work on this codebase.
-
-**Working Directory:** \`${handoff.workingDir}\`
-
-**What CC Did:**
-${handoff.summary}
-
-${handoff.confidence !== undefined ? `**CC's Confidence:** ${Math.round(handoff.confidence * 100)}%` : ''}
-
----
-
-# HOW TO REVIEW
-
-${role.reviewInstructions}
-
-**Key commands:**
-- \`git diff HEAD~1\` - See recent changes
-- \`git log --oneline -10\` - Recent commit history
-- Read files directly to verify claims`);
-
-  // ==========================================================================
-  // SECTION 3: CC'S UNCERTAINTIES (This is the key value-add!)
-  // ==========================================================================
+  // SECTION 3: CC'S UNCERTAINTIES
   if (handoff.uncertainties && handoff.uncertainties.length > 0) {
-    sections.push(`
----
+    sections.push(`## CC'S UNCERTAINTIES - VERIFY THESE
 
-# CC'S UNCERTAINTIES - VERIFY THESE
-
-CC flagged these items as uncertain. Your verification is especially valuable:
-
-${handoff.uncertainties.map((u, i) => `
-### ${i + 1}. ${u.topic} ${u.severity === 'critical' ? '⚠️ CRITICAL' : ''}
-
-**Question:** ${u.question}
-${u.ccAssumption ? `**CC assumed:** ${u.ccAssumption}` : ''}
-${u.relevantFiles ? `**Check:** ${u.relevantFiles.join(', ')}` : ''}
-`).join('\n')}`);
+${handoff.uncertainties.map((u, i) => `### ${i + 1}. ${u.topic} ${u.severity === 'critical' ? '⚠️' : ''}
+- **Question:** ${u.question}
+${u.ccAssumption ? `- **CC assumed:** ${u.ccAssumption}` : ''}
+${u.relevantFiles ? `- **Files:** ${u.relevantFiles.join(', ')}` : ''}`).join('\n\n')}`);
   }
 
-  // ==========================================================================
   // SECTION 4: SPECIFIC QUESTIONS
-  // ==========================================================================
   if (handoff.questions && handoff.questions.length > 0) {
-    sections.push(`
----
+    sections.push(`## QUESTIONS FROM CC
 
-# QUESTIONS FROM CC
-
-Please answer these specific questions:
-
-${handoff.questions.map((q, i) => `
-${i + 1}. **${q.question}**
+${handoff.questions.map((q, i) => `${i + 1}. **${q.question}**
    ${q.context ? `Context: ${q.context}` : ''}
-   ${q.ccGuess ? `CC thinks: "${q.ccGuess}" - verify this` : ''}
-`).join('\n')}`);
+   ${q.ccGuess ? `CC Guess: ${q.ccGuess}` : ''}`).join('\n')}`);
   }
 
-  // ==========================================================================
-  // SECTION 5: DECISIONS TO EVALUATE (Optional)
-  // ==========================================================================
+  // SECTION 5: DECISIONS TO EVALUATE
   if (handoff.decisions && handoff.decisions.length > 0) {
-    sections.push(`
----
+    sections.push(`## DECISIONS TO EVALUATE
 
-# CC'S DECISIONS - EVALUATE
-
-CC made these key decisions. Do you agree?
-
-${handoff.decisions.map((d, i) => `
-${i + 1}. **Decision:** ${d.decision}
-   **Rationale:** ${d.rationale}
-   ${d.alternatives ? `**Alternatives considered:** ${d.alternatives.join(', ')}` : ''}
-`).join('\n')}`);
+${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**
+   Rationale: ${d.rationale}
+   ${d.alternatives ? `Alternatives: ${d.alternatives.join(', ')}` : ''}`).join('\n')}`);
   }
 
-  // ==========================================================================
-  // SECTION 6: PRIORITY FILES (Optional)
-  // ==========================================================================
+  // SECTION 6: PRIORITY FILES
   if (handoff.priorityFiles && handoff.priorityFiles.length > 0) {
-    sections.push(`
----
-
-# PRIORITY FILES
-
-Focus your review on these files:
-${handoff.priorityFiles.map(f => `- \`${f}\``).join('\n')}`);
+    sections.push(`## PRIORITY FILES\n\n${handoff.priorityFiles.map(f => `- \`${f}\``).join('\n')}`);
   }
 
-  // ==========================================================================
   // SECTION 7: OUTPUT FORMAT
-  // ==========================================================================
   if (outputFormat === 'schema-enforced') {
-    // Schema is enforced externally (e.g. via --output-schema flag).
-    // Only include behavioral rules, skip the redundant JSON template.
-    sections.push(`
----
-
-# OUTPUT FORMAT
-
-Respond with valid JSON matching the provided output schema.
-
-**Rules:**
-- Use \`git diff\` and file reading to verify before claiming issues
-- Include evidence (code snippets) for findings
-- Confidence reflects how sure YOU are (not CC)
-- Answer CC's uncertainties and questions explicitly`);
+    sections.push(`## OUTPUT FORMAT
+Respond with valid JSON matching the schema. Use \`git diff\` and file reading to verify findings. Confidence reflects YOUR certainty.`);
   } else if (outputFormat === 'json') {
-    sections.push(`
----
-
-# OUTPUT FORMAT
-
+    sections.push(`## OUTPUT FORMAT
 Respond with valid JSON:
-
 \`\`\`json
 {
-  "findings": [
-    {
-      "id": "unique-id",
-      "category": "security|performance|correctness|architecture|other",
-      "severity": "critical|high|medium|low|info",
-      "confidence": 0.0-1.0,
-      "title": "Brief title",
-      "description": "Detailed explanation",
-      "location": { "file": "path/to/file.ts", "line_start": 42 },
-      "evidence": "Code snippet proving the issue",
-      "suggestion": "How to fix"
-    }
-  ],
-  "uncertainty_responses": [
-    {
-      "uncertainty_index": 1,
-      "verified": true|false,
-      "finding": "What you found",
-      "recommendation": "What CC should do"
-    }
-  ],
-  "question_answers": [
-    {
-      "question_index": 1,
-      "answer": "Your answer",
-      "confidence": 0.0-1.0
-    }
-  ],
-  "agreements": ["Things CC did well"],
-  "risk_assessment": {
-    "level": "critical|high|medium|low|minimal",
-    "summary": "Brief risk summary"
-  }
+  "findings": [{
+    "id": "string",
+    "category": "security|performance|correctness|architecture|other",
+    "severity": "critical|high|medium|low|info",
+    "confidence": 0.0-1.0,
+    "title": "string",
+    "description": "string",
+    "location": { "file": "string", "line_start": 0 },
+    "evidence": "code snippet",
+    "suggestion": "string"
+  }],
+  "uncertainty_responses": [{"uncertainty_index": 0, "verified": true, "finding": "string", "recommendation": "string"}],
+  "question_answers": [{"question_index": 0, "answer": "string", "confidence": 0.0-1.0}],
+  "agreements": ["string"],
+  "risk_assessment": { "level": "critical|high|medium|low|minimal", "summary": "string" }
 }
-\`\`\`
-
-**Rules:**
-- Use \`git diff\` and file reading to verify before claiming issues
-- Include evidence (code snippets) for findings
-- Confidence reflects how sure YOU are (not CC)
-- Answer CC's uncertainties and questions explicitly`);
+\`\`\``);
   } else {
-    sections.push(`
----
-
-# OUTPUT FORMAT
-
-Structure your response as:
-
-## Findings
-List issues found, with severity and location.
-
-## Uncertainty Responses
-Address each of CC's uncertainties.
-
-## Question Answers
-Answer CC's specific questions.
-
-## Agreements
-What CC did well.
-
-## Risk Assessment
-Overall risk level and summary.`);
+    sections.push(`## OUTPUT FORMAT
+Structure: ## Findings, ## Uncertainty Responses, ## Question Answers, ## Agreements, ## Risk Assessment.`);
   }
 
-  return sections.join('\n');
+  return sections.join('\n\n');
 }
 
 // =============================================================================
@@ -490,147 +364,57 @@ export interface PeerPromptOptions {
  */
 export function buildPeerPrompt(options: PeerPromptOptions): string {
   const { workingDir, prompt, taskType, relevantFiles, context, focusAreas, customInstructions, outputFormat } = options;
-
-  // Select role based on focus areas (reuse existing role selection)
   const role = selectRole(focusAreas);
 
   const sections: string[] = [];
 
-  // SECTION 1: ROLE (adapted from review role)
+  // SECTION 1: ROLE
   sections.push(`# ROLE: ${role.name} — Peer Engineer
 
 ${role.systemPrompt}
-
-You are acting as a collaborative peer engineer, NOT a reviewer.
-Your job is to help Claude Code (CC) with whatever it needs:
-planning, debugging, explaining, fixing, exploring, or answering questions.
-Be direct, specific, and actionable.`);
+Collaborate with CC. Help with planning, debugging, or answering questions. Be direct and actionable.`);
 
   // SECTION 2: TASK
   const taskLabel = taskType ? ` [${taskType.toUpperCase()}]` : '';
-  sections.push(`
----
+  sections.push(`## YOUR TASK${taskLabel}
 
-# YOUR TASK${taskLabel}
-
-**Working Directory:** \`${workingDir}\`
-
-**CC's Request:**
-${prompt}
-${context ? `\n**Additional Context:**\n${context}` : ''}`);
+**Request:** ${prompt}${context ? `\n**Context:** ${context}` : ''}`);
 
   // SECTION 3: RELEVANT FILES
   if (relevantFiles && relevantFiles.length > 0) {
-    sections.push(`
----
-
-# RELEVANT FILES
-
-CC suggests focusing on these files:
-${relevantFiles.map(f => `- \`${f}\``).join('\n')}
-
-Read these files to understand the context. Also explore related files if needed.`);
+    sections.push(`## RELEVANT FILES\n${relevantFiles.map(f => `- \`${f}\``).join('\n')}`);
   }
 
   // SECTION 4: FOCUS AREAS
   if (focusAreas && focusAreas.length > 0) {
-    sections.push(`
----
-
-# FOCUS AREAS
-
-Prioritize these aspects: ${focusAreas.join(', ')}`);
+    sections.push(`## FOCUS AREAS\n\n${focusAreas.join(', ')}`);
   }
 
   // SECTION 5: CUSTOM INSTRUCTIONS
   if (customInstructions) {
-    sections.push(`
----
-
-# ADDITIONAL INSTRUCTIONS
-
-${customInstructions}`);
+    sections.push(`## ADDITIONAL INSTRUCTIONS\n\n${customInstructions}`);
   }
 
-  // SECTION 6: HOW TO WORK
-  sections.push(`
----
-
-# HOW TO WORK
-
-1. Read the relevant files in the working directory
-2. Use \`git log --oneline -10\` and \`git diff\` if useful
-3. Think through the problem step by step
-4. Provide a clear, actionable answer
-5. Reference specific files and line numbers
-6. Suggest concrete next steps`);
-
-  // SECTION 7: OUTPUT FORMAT
+  // SECTION 6: OUTPUT FORMAT
   if (outputFormat === 'schema-enforced') {
-    // Schema is enforced externally (e.g. via --output-schema flag).
-    // Only include behavioral rules, skip the redundant JSON template.
-    sections.push(`
----
-
-# OUTPUT FORMAT
-
-Respond with valid JSON matching the provided output schema.
-
-**Rules:**
-- Read files before making claims
-- Reference specific file paths and line numbers
-- Be concrete and actionable — no vague suggestions
-- Confidence reflects how sure YOU are about your answer
-- Include alternatives when there are meaningful tradeoffs`);
+    sections.push(`## OUTPUT FORMAT
+Respond with valid JSON matching the schema. Read files before making claims. Confidence reflects YOUR certainty.`);
   } else {
-    sections.push(`
----
-
-# OUTPUT FORMAT
-
+    sections.push(`## OUTPUT FORMAT
 Respond with valid JSON:
-
 \`\`\`json
 {
-  "responder": "<your-name>",
-  "answer": "Your detailed response in markdown",
+  "responder": "string",
+  "answer": "markdown",
   "confidence": 0.0-1.0,
-  "key_points": ["Point 1", "Point 2"],
-  "suggested_actions": [
-    {
-      "action": "What to do",
-      "priority": "high|medium|low",
-      "file": "path/to/file.ts",
-      "rationale": "Why"
-    }
-  ],
-  "file_references": [
-    {
-      "path": "path/to/file.ts",
-      "lines": "10-25",
-      "relevance": "Why this file matters"
-    }
-  ],
-  "alternatives": [
-    {
-      "topic": "The decision point",
-      "current_approach": "What exists now",
-      "alternative": "Different approach",
-      "tradeoffs": { "pros": ["..."], "cons": ["..."] },
-      "recommendation": "strongly_prefer|consider|situational|informational"
-    }
-  ],
-  "execution_notes": "Any notes about your process"
+  "key_points": ["string"],
+  "suggested_actions": [{ "action": "string", "priority": "high|medium|low", "file": "string", "rationale": "string" }],
+  "file_references": [{ "path": "string", "lines": "string", "relevance": "string" }],
+  "alternatives": [{ "topic": "string", "current_approach": "string", "alternative": "string", "tradeoffs": { "pros": [], "cons": [] }, "recommendation": "string" }],
+  "execution_notes": "string"
 }
-\`\`\`
-
-**Rules:**
-- Read files before making claims
-- Reference specific file paths and line numbers
-- Be concrete and actionable — no vague suggestions
-- Confidence reflects how sure YOU are about your answer
-- Include alternatives when there are meaningful tradeoffs`);
+\`\`\``);
   }
 
-  return sections.join('\n');
+  return sections.join('\n\n');
 }
