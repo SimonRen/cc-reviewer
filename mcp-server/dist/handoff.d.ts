@@ -189,7 +189,6 @@ export interface ReviewerRole {
     isGeneric: boolean;
     applicableFocusAreas: FocusArea[];
     systemPrompt: string;
-    reviewInstructions: string;
 }
 /**
  * Strong generic role - when no specific focus is given
