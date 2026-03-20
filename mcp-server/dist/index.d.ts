@@ -13,6 +13,6 @@
  *
  * Usage:
  * - npx cc-reviewer          # Run MCP server (normal usage)
- * - npx cc-reviewer --setup  # Install slash commands only
+ * - npx cc-reviewer update   # Install/update slash commands
  */
 import './adapters/index.js';

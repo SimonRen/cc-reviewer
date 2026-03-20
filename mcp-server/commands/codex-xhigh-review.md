@@ -17,10 +17,10 @@ Use the `codex_review` MCP tool with `reasoningEffort: "xhigh"` for deeper analy
 2. Call the `codex_review` tool with:
    - `workingDir`: current working directory
    - `ccOutput`: brief summary of recent changes or context
-   - `reasoningEffort`: "xhigh" (this is the key difference from /codex)
+   - `reasoningEffort`: "xhigh" (this is the key difference from /codex-review)
    - `serviceTier`: if user says "fast mode"/"fast"/"priority" → "fast"; if "flex"/"cheap"/"budget" → "flex"; otherwise omit
-   - `focus`: extracted from $ARGUMENTS if it's a known focus area
-   - `customInstructions`: $ARGUMENTS if it's custom text
+   - `focusAreas`: extracted from $ARGUMENTS if it's a known focus area
+   - `customPrompt`: $ARGUMENTS if it's custom text
 
 3. After receiving feedback - VALIDATE before accepting:
 

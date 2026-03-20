@@ -229,17 +229,3 @@ export declare function buildSimpleHandoff(workingDir: string, ccOutput: string,
  * CC should call this to add its specific concerns
  */
 export declare function enhanceHandoff(handoff: Handoff, uncertainties?: Uncertainty[], questions?: Question[], decisions?: Decision[]): Handoff;
-export interface PeerPromptOptions {
-    workingDir: string;
-    prompt: string;
-    taskType?: string;
-    relevantFiles?: string[];
-    context?: string;
-    focusAreas?: FocusArea[];
-    customInstructions?: string;
-}
-/**
- * Build a prompt for general-purpose peer assistance (not review).
- * No output format constraints — peer responds naturally, CC interprets.
- */
-export declare function buildPeerPrompt(options: PeerPromptOptions): string;

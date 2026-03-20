@@ -11,11 +11,11 @@ claude mcp add -s user cc-reviewer -- npx -y cc-reviewer
 
 **Step 2: Restart Claude Code**
 
-The MCP tools and slash commands (`/codex`, `/gemini`, `/multi`, `/ask-codex`, `/ask-gemini`, `/ask-multi`) are automatically installed.
+The MCP tools and slash commands (`/codex-review`, `/gemini-review`, `/multi-review`) are automatically installed.
 
 **Manual command install** (if needed):
 ```bash
-npx cc-reviewer --setup
+npx cc-reviewer update
 ```
 
 Verify with:
@@ -52,14 +52,10 @@ gemini  # follow auth prompts
 These tools provide **external second-opinion reviews** from Codex and Gemini CLIs. They are designed to complement Claude Code's native review capabilities, not replace them.
 
 **Review tools** (external second-opinion on your work):
-- `/codex` or "review with codex" - Get external Codex review
-- `/gemini` or "review with gemini" - Get external Gemini review
-- `/multi` - Get parallel reviews from both CLIs
-
-**Ask tools** (get help from a peer engineer):
-- `/ask-codex` - Ask Codex for help (planning, debugging, explaining, fixing)
-- `/ask-gemini` - Ask Gemini for help (architecture, patterns, scalability)
-- `/ask-multi` - Ask both models in parallel
+- `/codex-review` or "review with codex" - Get external Codex review
+- `/codex-xhigh-review` - Deep-thinking Codex review with xhigh reasoning
+- `/gemini-review` or "review with gemini" - Get external Gemini review
+- `/multi-review` - Get parallel reviews from both CLIs
 
 **For regular reviews:** Just say "review" and Claude Code will use its native capabilities. These external tools are only invoked when explicitly requested.
 
@@ -68,24 +64,18 @@ These tools provide **external second-opinion reviews** from Codex and Gemini CL
 These commands are available after restart:
 
 ```bash
-# Review tools
-/codex                    # Review with Codex
-/codex security           # Focus on security
-/codex-xhigh              # Codex with xhigh reasoning effort
-/gemini                   # Review with Gemini
-/gemini architecture      # Focus on architecture
-/multi                    # Both models in parallel
-
-# Ask tools (peer engineer)
-/ask-codex                # Ask Codex for help
-/ask-gemini               # Ask Gemini for help
-/ask-multi                # Ask both in parallel
+/codex-review             # Review with Codex
+/codex-review security    # Focus on security
+/codex-xhigh-review       # Codex with xhigh reasoning effort
+/gemini-review            # Review with Gemini
+/gemini-review architecture # Focus on architecture
+/multi-review             # Both models in parallel
 ```
 
 ## How It Works
 
 ```
-CC does work → User: /codex → External CLI reviews → CC synthesizes → Updated output
+CC does work → User: /codex-review → External CLI reviews → CC synthesizes → Updated output
 ```
 
 **Key Principles:**
@@ -108,32 +98,22 @@ CC does work → User: /codex → External CLI reviews → CC synthesizes → Up
 
 ## MCP Tools
 
-The plugin exposes six MCP tools:
+The plugin exposes three MCP tools:
 
 | Tool | Description |
 |------|-------------|
 | `codex_review` | Get Codex review (correctness, edge cases, performance) |
 | `gemini_review` | Get Gemini review (design patterns, scalability, tech debt) |
 | `multi_review` | Parallel review from both models |
-| `ask_codex` | Ask Codex for help (planning, debugging, explaining, fixing) |
-| `ask_gemini` | Ask Gemini for help (architecture, patterns, scalability) |
-| `ask_multi` | Ask both models in parallel |
 
 ## Output Format
 
-**Review tools** return structured JSON feedback with:
+**Review tools** return structured feedback from the external CLIs. Claude Code parses this feedback to identify:
 - **Findings**: Issues with severity, confidence, location, and suggestions
 - **Agreements**: Validations of CC's correct assessments
 - **Disagreements**: Challenges to CC's claims with corrections
 - **Alternatives**: Different approaches with tradeoffs
 - **Risk Assessment**: Overall risk level with top concerns
-
-**Ask tools** return structured JSON responses with:
-- **Answer**: Main response text (markdown)
-- **Key Points**: Bullet summary of main points
-- **Suggested Actions**: Recommended actions with priority and rationale
-- **File References**: Files examined with line ranges and relevance
-- **Alternatives**: Alternative approaches considered
 
 ## Development
 

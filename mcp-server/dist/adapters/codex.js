@@ -10,7 +10,7 @@ import { existsSync } from 'fs';
 import { registerAdapter, } from './base.js';
 import { CliExecutor } from '../executor.js';
 import { CodexEventDecoder } from '../decoders/index.js';
-import { buildSimpleHandoff, buildHandoffPrompt, buildPeerPrompt, selectRole, } from '../handoff.js';
+import { buildSimpleHandoff, buildHandoffPrompt, selectRole, } from '../handoff.js';
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
@@ -70,46 +70,7 @@ export class CodexAdapter {
                 return {
                     success: false,
                     error: { type: 'cli_error', message: 'Codex returned empty response' },
-                    suggestion: 'Try again or use /gemini instead',
-                    executionTimeMs: Date.now() - startTime,
-                };
-            }
-            return { success: true, output: result.stdout, executionTimeMs: Date.now() - startTime };
-        }
-        catch (error) {
-            return this.handleException(error, startTime);
-        }
-    }
-    async runPeerRequest(request) {
-        const startTime = Date.now();
-        if (!existsSync(request.workingDir)) {
-            return {
-                success: false,
-                error: { type: 'cli_error', message: `Working directory does not exist: ${request.workingDir}` },
-                suggestion: 'Check that the working directory path is correct',
-                executionTimeMs: Date.now() - startTime,
-            };
-        }
-        try {
-            const prompt = buildPeerPrompt({
-                workingDir: request.workingDir,
-                prompt: request.prompt,
-                taskType: request.taskType,
-                relevantFiles: request.relevantFiles,
-                context: request.context,
-                focusAreas: request.focusAreas,
-                customInstructions: request.customPrompt,
-            });
-            const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', request.serviceTier);
-            if (result.exitCode !== 0) {
-                const error = this.categorizeError(result.stderr);
-                return { success: false, error, suggestion: this.getSuggestion(error), executionTimeMs: Date.now() - startTime };
-            }
-            if (!result.stdout.trim()) {
-                return {
-                    success: false,
-                    error: { type: 'cli_error', message: 'Codex returned empty response' },
-                    suggestion: 'Try again or use /ask-gemini instead',
+                    suggestion: 'Try again or use /gemini-review instead',
                     executionTimeMs: Date.now() - startTime,
                 };
             }
@@ -178,11 +139,11 @@ export class CodexAdapter {
         const err = error;
         if (err.code === 'ENOENT') {
             return { success: false, error: { type: 'cli_not_found', message: 'Codex CLI not found' },
-                suggestion: 'Install with: npm install -g @openai/codex', executionTimeMs: Date.now() - startTime };
+                suggestion: 'Install with: npm install -g @openai/codex-cli', executionTimeMs: Date.now() - startTime };
         }
         if (err.message === 'TIMEOUT') {
             return { success: false, error: { type: 'timeout', message: 'Codex timed out — no events received' },
-                suggestion: 'Try a smaller scope or use /gemini', executionTimeMs: Date.now() - startTime };
+                suggestion: 'Try a smaller scope or use /gemini-review', executionTimeMs: Date.now() - startTime };
         }
         if (err.message === 'MAX_TIMEOUT') {
             return { success: false, error: { type: 'timeout', message: 'Task exceeded 60 minute maximum' },
@@ -205,9 +166,9 @@ export class CodexAdapter {
     }
     getSuggestion(error) {
         switch (error.type) {
-            case 'rate_limit': return 'Wait and retry, or use /gemini instead';
+            case 'rate_limit': return 'Wait and retry, or use /gemini-review instead';
             case 'auth_error': return 'Run `codex login` to authenticate';
-            case 'cli_not_found': return 'Install with: npm install -g @openai/codex';
+            case 'cli_not_found': return 'Install with: npm install -g @openai/codex-cli';
             default: return 'Check the error message and try again';
         }
     }

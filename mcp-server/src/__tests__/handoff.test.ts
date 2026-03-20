@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildHandoffPrompt, buildPeerPrompt, Handoff } from '../handoff.js';
+import { buildHandoffPrompt, Handoff } from '../handoff.js';
 
 describe('handoff prompt building', () => {
   const mockHandoff: Handoff = {
@@ -33,28 +33,3 @@ describe('handoff prompt building', () => {
   });
 });
 
-describe('peer prompt building', () => {
-  it('should build a peer prompt', () => {
-    const prompt = buildPeerPrompt({
-      workingDir: '/test/dir',
-      prompt: 'Help me debug',
-      relevantFiles: ['src/debug.ts']
-    });
-
-    expect(prompt).toContain('# ROLE: Comprehensive Code Reviewer — Peer Engineer');
-    expect(prompt).toContain('## YOUR TASK');
-    expect(prompt).toContain('**Request:** Help me debug');
-    expect(prompt).toContain('## RELEVANT FILES');
-    expect(prompt).toContain('src/debug.ts');
-  });
-
-  it('should not contain any output format instructions', () => {
-    const prompt = buildPeerPrompt({
-      workingDir: '/test/dir',
-      prompt: 'Help me debug',
-    });
-    expect(prompt).not.toContain('OUTPUT FORMAT');
-    expect(prompt).not.toContain('"responder"');
-    expect(prompt).not.toContain('JSON');
-  });
-});

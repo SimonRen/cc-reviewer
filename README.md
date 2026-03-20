@@ -11,11 +11,11 @@ claude mcp add -s user cc-reviewer -- npx -y cc-reviewer
 
 **Step 2: Restart Claude Code**
 
-The MCP tools and slash commands (`/codex`, `/gemini`, `/multi`) are automatically installed.
+The MCP tools and slash commands (`/codex-review`, `/gemini-review`, `/multi-review`) are automatically installed.
 
 **Manual command install** (if needed):
 ```bash
-npx cc-reviewer --setup
+npx cc-reviewer update
 ```
 
 Verify with:
@@ -52,9 +52,10 @@ gemini  # follow auth prompts
 These tools provide **external second-opinion reviews** from Codex and Gemini CLIs. They are designed to complement Claude Code's native review capabilities, not replace them.
 
 **When to use:**
-- `/codex` or "review with codex" - Get external Codex review
-- `/gemini` or "review with gemini" - Get external Gemini review
-- `/multi` - Get parallel reviews from both CLIs
+- `/codex-review` or "review with codex" - Get external Codex review
+- `/codex-xhigh-review` - Deep-thinking Codex review with xhigh reasoning
+- `/gemini-review` or "review with gemini" - Get external Gemini review
+- `/multi-review` - Get parallel reviews from both CLIs
 
 **For regular reviews:** Just say "review" and Claude Code will use its native capabilities. These external tools are only invoked when explicitly requested.
 
@@ -63,20 +64,18 @@ These tools provide **external second-opinion reviews** from Codex and Gemini CL
 These commands are available after restart:
 
 ```bash
-/codex                    # Review with Codex
-/codex security           # Focus on security
-/codex-xhigh              # Codex with xhigh reasoning effort
-
-/gemini                   # Review with Gemini
-/gemini architecture      # Focus on architecture
-
-/multi                    # Both models in parallel
+/codex-review             # Review with Codex
+/codex-review security    # Focus on security
+/codex-xhigh-review       # Codex with xhigh reasoning effort
+/gemini-review            # Review with Gemini
+/gemini-review architecture # Focus on architecture
+/multi-review             # Both models in parallel
 ```
 
 ## How It Works
 
 ```
-CC does work → User: /codex → External CLI reviews → CC synthesizes → Updated output
+CC does work → User: /codex-review → External CLI reviews → CC synthesizes → Updated output
 ```
 
 **Key Principles:**
@@ -109,7 +108,7 @@ The plugin exposes three MCP tools:
 
 ## Output Format
 
-External CLIs return structured JSON feedback with:
+External CLIs return structured feedback. Claude Code parses this feedback to identify:
 - **Findings**: Issues with severity, confidence, location, and suggestions
 - **Agreements**: Validations of CC's correct assessments
 - **Disagreements**: Challenges to CC's claims with corrections
@@ -130,9 +129,18 @@ npm start           # Run server
 
 ## Publishing
 
-Uses npm Trusted Publishing (OIDC, no tokens):
+Release-based publish via npm Trusted Publishing (OIDC, no tokens needed).
+CI triggers on GitHub Release, validates the tag matches `package.json`.
+
 ```bash
-gh workflow run publish.yml -f version=patch  # or minor/major
+# 1. Bump version in package.json
+# 2. Rebuild and test
+cd mcp-server && npm run build && npm test
+# 3. Commit, tag, push, release
+git add -A && git commit -m "v1.x.x"
+git tag v1.x.x
+git push && git push --tags
+gh release create v1.x.x --title "v1.x.x" --generate-notes
 ```
 
 ## License

@@ -5,7 +5,7 @@
  * Makes it easy to add new models (Ollama, Azure, etc.) without
  * changing the core orchestration logic.
  */
-import { FocusArea, OutputType, ReasoningEffort, ServiceTier, TaskType } from '../types.js';
+import { FocusArea, OutputType, ReasoningEffort, ServiceTier } from '../types.js';
 export interface ReviewerCapabilities {
     /** Display name for this reviewer */
     name: string;
@@ -54,26 +54,6 @@ export interface ExpertRole {
 export declare const EXPERT_ROLES: Record<string, ExpertRole>;
 /** @deprecated Use handoff.ts selectRole() instead */
 export declare function selectExpertRole(focusAreas?: FocusArea[]): ExpertRole;
-export interface PeerRequest {
-    /** Working directory containing the code */
-    workingDir: string;
-    /** The question or request from CC */
-    prompt: string;
-    /** Hint about the type of task */
-    taskType?: TaskType;
-    /** Files the peer should focus on */
-    relevantFiles?: string[];
-    /** Additional context (error messages, prior analysis) */
-    context?: string;
-    /** Areas to focus on */
-    focusAreas?: FocusArea[];
-    /** Custom instructions from the user */
-    customPrompt?: string;
-    /** Reasoning effort level (for models that support it) */
-    reasoningEffort?: ReasoningEffort;
-    /** Service tier (for models that support it: priority = fast, flex = cheap) */
-    serviceTier?: ServiceTier;
-}
 export interface ReviewSuccess {
     success: true;
     output: string;
@@ -92,19 +72,6 @@ export interface ReviewError {
     message: string;
     details?: Record<string, unknown>;
 }
-export interface PeerSuccess {
-    success: true;
-    output: string;
-    executionTimeMs: number;
-}
-export interface PeerFailure {
-    success: false;
-    error: ReviewError;
-    suggestion?: string;
-    rawOutput?: string;
-    executionTimeMs: number;
-}
-export type PeerResult = PeerSuccess | PeerFailure;
 /**
  * Base interface that all reviewer adapters must implement.
  * This allows easy addition of new AI CLIs without changing orchestration logic.
@@ -118,8 +85,6 @@ export interface ReviewerAdapter {
     isAvailable(): Promise<boolean>;
     /** Run a review and return structured output */
     runReview(request: ReviewRequest): Promise<ReviewResult>;
-    /** Run a general-purpose peer request and return structured output */
-    runPeerRequest(request: PeerRequest): Promise<PeerResult>;
     /**
      * Optional: Run peer review of another model's output
      * Future capability - not currently implemented by any adapter

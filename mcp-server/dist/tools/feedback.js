@@ -59,7 +59,7 @@ export async function handleCodexReview(input) {
         return { content: [{ type: 'text', text: '❌ Codex adapter not registered' }] };
     const available = await adapter.isAvailable();
     if (!available)
-        return { content: [{ type: 'text', text: '❌ Codex CLI not found.\n\nInstall with: npm install -g @openai/codex\n\nAlternative: Use gemini_review instead' }] };
+        return { content: [{ type: 'text', text: '❌ Codex CLI not found.\n\nInstall with: npm install -g @openai/codex-cli\n\nAlternative: Use gemini_review instead' }] };
     const result = await adapter.runReview(toReviewRequest(input));
     return { content: [{ type: 'text', text: formatResult(result, 'Codex') }] };
 }
@@ -80,7 +80,7 @@ export async function handleMultiReview(input) {
     const request = toReviewRequest(input);
     const availableAdapters = await getAvailableAdapters();
     if (availableAdapters.length === 0) {
-        return { content: [{ type: 'text', text: '❌ No AI CLIs found.\n\nInstall at least one:\n  - Codex: npm install -g @openai/codex\n  - Gemini: npm install -g @google/gemini-cli' }] };
+        return { content: [{ type: 'text', text: '❌ No AI CLIs found.\n\nInstall at least one:\n  - Codex: npm install -g @openai/codex-cli\n  - Gemini: npm install -g @google/gemini-cli' }] };
     }
     const results = await Promise.all(availableAdapters.map(async (adapter) => {
         const result = await adapter.runReview({ ...request });
@@ -108,7 +108,7 @@ export async function handleMultiReview(input) {
 export const TOOL_DEFINITIONS = {
     codex_review: {
         name: 'codex_review',
-        description: "ONLY use when user explicitly requests '/codex' or 'review with codex'. Get external second-opinion from OpenAI Codex CLI. Codex focuses on correctness, edge cases, and performance. DO NOT use for general 'review' requests.",
+        description: "ONLY use when user explicitly requests '/codex-review' or 'review with codex'. Get external second-opinion from OpenAI Codex CLI. Codex focuses on correctness, edge cases, and performance. DO NOT use for general 'review' requests.",
         inputSchema: {
             type: 'object',
             properties: {
@@ -126,7 +126,7 @@ export const TOOL_DEFINITIONS = {
     },
     gemini_review: {
         name: 'gemini_review',
-        description: "ONLY use when user explicitly requests '/gemini' or 'review with gemini'. Get external second-opinion from Google Gemini CLI. Gemini focuses on design patterns, scalability, and tech debt. DO NOT use for general 'review' requests.",
+        description: "ONLY use when user explicitly requests '/gemini-review' or 'review with gemini'. Get external second-opinion from Google Gemini CLI. Gemini focuses on design patterns, scalability, and tech debt. DO NOT use for general 'review' requests.",
         inputSchema: {
             type: 'object',
             properties: {
@@ -142,7 +142,7 @@ export const TOOL_DEFINITIONS = {
     },
     multi_review: {
         name: 'multi_review',
-        description: "ONLY use when user explicitly requests '/multi' or 'review with both codex and gemini'. Get parallel second-opinions from both external CLIs (Codex and Gemini). Returns combined reviews for synthesis. DO NOT use for general 'review' requests.",
+        description: "ONLY use when user explicitly requests '/multi-review' or 'review with both codex and gemini'. Get parallel second-opinions from both external CLIs (Codex and Gemini). Returns combined reviews for synthesis. DO NOT use for general 'review' requests.",
         inputSchema: {
             type: 'object',
             properties: {

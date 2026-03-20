@@ -7,7 +7,7 @@ Get parallel reviews from both Codex and Gemini, raw output for manual synthesis
 
 ## When to Use
 
-Use `/multi` when you want parallel reviews from both Codex and Gemini.
+Use `/multi-review` when you want parallel reviews from both Codex and Gemini.
 
 ## Before Calling - PREPARE THE HANDOFF
 

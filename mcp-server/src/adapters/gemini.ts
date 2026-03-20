@@ -14,8 +14,6 @@ import {
   ReviewRequest,
   ReviewResult,
   ReviewError,
-  PeerRequest,
-  PeerResult,
   registerAdapter,
 } from './base.js';
 import { CliExecutor } from '../executor.js';
@@ -23,7 +21,6 @@ import { GeminiEventDecoder } from '../decoders/index.js';
 import {
   buildSimpleHandoff,
   buildHandoffPrompt,
-  buildPeerPrompt,
   selectRole,
   FocusArea,
 } from '../handoff.js';
@@ -98,52 +95,7 @@ export class GeminiAdapter implements ReviewerAdapter {
         return {
           success: false,
           error: { type: 'cli_error', message: 'Gemini returned empty response' },
-          suggestion: 'Try again or use /codex instead',
-          executionTimeMs: Date.now() - startTime,
-        };
-      }
-
-      return { success: true, output: result.stdout, executionTimeMs: Date.now() - startTime };
-    } catch (error) {
-      return this.handleException(error, startTime);
-    }
-  }
-
-  async runPeerRequest(request: PeerRequest): Promise<PeerResult> {
-    const startTime = Date.now();
-
-    if (!existsSync(request.workingDir)) {
-      return {
-        success: false,
-        error: { type: 'cli_error', message: `Working directory does not exist: ${request.workingDir}` },
-        suggestion: 'Check that the working directory path is correct',
-        executionTimeMs: Date.now() - startTime,
-      };
-    }
-
-    try {
-      const prompt = buildPeerPrompt({
-        workingDir: request.workingDir,
-        prompt: request.prompt,
-        taskType: request.taskType,
-        relevantFiles: request.relevantFiles,
-        context: request.context,
-        focusAreas: request.focusAreas,
-        customInstructions: request.customPrompt,
-      });
-
-      const result = await this.runCli(prompt, request.workingDir);
-
-      if (result.exitCode !== 0) {
-        const error = this.categorizeError(result.stderr);
-        return { success: false, error, suggestion: this.getSuggestion(error), executionTimeMs: Date.now() - startTime };
-      }
-
-      if (!result.stdout.trim()) {
-        return {
-          success: false,
-          error: { type: 'cli_error', message: 'Gemini returned empty response' },
-          suggestion: 'Try again or use /ask-codex instead',
+          suggestion: 'Try again or use /codex-review instead',
           executionTimeMs: Date.now() - startTime,
         };
       }
@@ -203,7 +155,7 @@ export class GeminiAdapter implements ReviewerAdapter {
     };
   }
 
-  private handleException(error: unknown, startTime: number): ReviewResult | PeerResult {
+  private handleException(error: unknown, startTime: number): ReviewResult {
     const err = error as Error & { code?: string };
     if (err.code === 'ENOENT') {
       return { success: false, error: { type: 'cli_not_found', message: 'Gemini CLI not found' },
@@ -211,7 +163,7 @@ export class GeminiAdapter implements ReviewerAdapter {
     }
     if (err.message === 'TIMEOUT') {
       return { success: false, error: { type: 'timeout', message: 'Gemini timed out — no events received' },
-        suggestion: 'Try a smaller scope or use /codex', executionTimeMs: Date.now() - startTime };
+        suggestion: 'Try a smaller scope or use /codex-review', executionTimeMs: Date.now() - startTime };
     }
     if (err.message === 'MAX_TIMEOUT') {
       return { success: false, error: { type: 'timeout', message: 'Task exceeded 60 minute maximum' },
@@ -233,7 +185,7 @@ export class GeminiAdapter implements ReviewerAdapter {
 
   private getSuggestion(error: ReviewError): string {
     switch (error.type) {
-      case 'rate_limit': return 'Wait and retry, or use /codex instead';
+      case 'rate_limit': return 'Wait and retry, or use /codex-review instead';
       case 'auth_error': return 'Run `gemini` and follow auth prompts, or set GEMINI_API_KEY';
       case 'cli_not_found': return 'Install with: npm install -g @google/gemini-cli';
       default: return 'Check the error message and try again';

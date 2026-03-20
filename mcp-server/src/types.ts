@@ -25,9 +25,6 @@ export type ReasoningEffort = 'high' | 'xhigh';
 // Service tier for Codex (controls speed/cost trade-off)
 export type ServiceTier = 'default' | 'fast' | 'flex';
 
-// Task types for peer ask tools
-export type TaskType = 'plan' | 'debug' | 'explain' | 'question' | 'fix' | 'explore' | 'general';
-
 // Request to get feedback from an external CLI
 export interface FeedbackRequest {
   workingDir: string;         // CLI working directory

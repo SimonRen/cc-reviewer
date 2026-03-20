@@ -227,35 +227,3 @@ export function enhanceHandoff(handoff, uncertainties, questions, decisions) {
         decisions: decisions || handoff.decisions,
     };
 }
-/**
- * Build a prompt for general-purpose peer assistance (not review).
- * No output format constraints — peer responds naturally, CC interprets.
- */
-export function buildPeerPrompt(options) {
-    const { workingDir, prompt, taskType, relevantFiles, context, focusAreas, customInstructions } = options;
-    const role = selectRole(focusAreas);
-    const sections = [];
-    // SECTION 1: ROLE
-    sections.push(`# ROLE: ${role.name} — Peer Engineer
-
-${role.systemPrompt}
-Be direct and actionable.`);
-    // SECTION 2: TASK
-    const taskLabel = taskType ? ` [${taskType.toUpperCase()}]` : '';
-    sections.push(`## YOUR TASK${taskLabel}
-
-**Request:** ${prompt}${context ? `\n**Context:** ${context}` : ''}`);
-    // SECTION 3: RELEVANT FILES
-    if (relevantFiles && relevantFiles.length > 0) {
-        sections.push(`## RELEVANT FILES\n${relevantFiles.map(f => `- \`${f}\``).join('\n')}`);
-    }
-    // SECTION 4: FOCUS AREAS
-    if (focusAreas && focusAreas.length > 0) {
-        sections.push(`## FOCUS AREAS\n\n${focusAreas.join(', ')}`);
-    }
-    // SECTION 5: CUSTOM INSTRUCTIONS
-    if (customInstructions) {
-        sections.push(`## ADDITIONAL INSTRUCTIONS\n\n${customInstructions}`);
-    }
-    return sections.join('\n\n');
-}
