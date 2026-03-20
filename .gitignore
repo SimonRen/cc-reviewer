@@ -1,9 +1,6 @@
 # Dependencies
 node_modules/
 
-# Build output (uncomment if you want to commit dist/)
-# mcp-server/dist/
-
 # OS files
 .DS_Store
 Thumbs.db
@@ -22,3 +19,9 @@ npm-debug.log*
 
 # Package manager locks (using npm)
 bun.lock
+
+# Claude Code
+.claude/
+
+# npm pack artifacts
+*.tgz
