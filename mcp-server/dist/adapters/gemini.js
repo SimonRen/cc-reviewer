@@ -79,7 +79,8 @@ export class GeminiAdapter {
     }
     async runCli(prompt, workingDir) {
         const args = [
-            '--yolo',
+            '--sandbox',
+            '--approval-mode', 'plan',
             '--output-format', 'stream-json',
             '--include-directories', workingDir,
             '-p', '',

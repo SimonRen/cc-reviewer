@@ -226,7 +226,9 @@ export function buildHandoffPrompt(options: PromptOptions): string {
 
 Review recent work in \`${handoff.workingDir}\`.
 
-**Summary:** ${handoff.summary}${handoff.confidence !== undefined && handoff.confidence < 0.9 ? `\n**CC Confidence:** ${Math.round(handoff.confidence * 100)}% — verify weak areas` : ''}`);
+**Summary:** ${handoff.summary}${handoff.confidence !== undefined && handoff.confidence < 0.9 ? `\n**CC Confidence:** ${Math.round(handoff.confidence * 100)}% — verify weak areas` : ''}
+
+**IMPORTANT: This is a READ-ONLY review. Do NOT create, modify, or delete any files. Only read files to verify claims.**`);
 
   // SECTION 3: CC'S UNCERTAINTIES
   if (handoff.uncertainties && handoff.uncertainties.length > 0) {

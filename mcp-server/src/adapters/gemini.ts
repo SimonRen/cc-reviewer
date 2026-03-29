@@ -111,7 +111,8 @@ export class GeminiAdapter implements ReviewerAdapter {
     workingDir: string
   ): Promise<{ stdout: string; stderr: string; exitCode: number; truncated: boolean }> {
     const args = [
-      '--yolo',
+      '--sandbox',
+      '--approval-mode', 'plan',
       '--output-format', 'stream-json',
       '--include-directories', workingDir,
       '-p', '',

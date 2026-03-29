@@ -87,7 +87,8 @@ export class CodexAdapter {
             '-m', 'gpt-5.4',
             '-c', `model_reasoning_effort=${reasoningEffort}`,
             '-c', 'model_reasoning_summary_format=experimental',
-            '--dangerously-bypass-approvals-and-sandbox',
+            '--full-auto',
+            '--sandbox', 'read-only',
             '--skip-git-repo-check',
             '-C', workingDir,
             '-', // Read prompt from stdin
