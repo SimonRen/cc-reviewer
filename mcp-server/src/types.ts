@@ -17,7 +17,7 @@ export type FocusArea =
   | 'documentation';
 
 // Supported CLI types
-export type CliType = 'codex' | 'gemini';
+export type CliType = 'codex' | 'gemini' | 'claude';
 
 // Reasoning effort level for Codex
 export type ReasoningEffort = 'high' | 'xhigh';
@@ -75,6 +75,7 @@ export interface MultiFeedbackResult {
 export interface CliStatus {
   codex: boolean;
   gemini: boolean;
+  claude: boolean;
 }
 
 // Structured feedback output from external CLI
@@ -103,6 +104,11 @@ export const REVIEWER_PERSONAS: Record<CliType, ReviewerPersona> = {
     name: 'Gemini',
     focus: 'design patterns, scalability, tech debt',
     style: 'Think holistically - consider broader context.'
+  },
+  claude: {
+    name: 'Claude',
+    focus: 'deep analysis, correctness, security, architecture',
+    style: 'Fresh perspective with clean context - challenge assumptions.'
   }
 };
 

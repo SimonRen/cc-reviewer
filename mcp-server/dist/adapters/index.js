@@ -6,8 +6,10 @@
 // Import adapters to register them
 import './codex.js';
 import './gemini.js';
+import './claude.js';
 // Re-export everything from base
 export * from './base.js';
 // Export specific adapters
 export { codexAdapter } from './codex.js';
 export { geminiAdapter } from './gemini.js';
+export { claudeAdapter } from './claude.js';

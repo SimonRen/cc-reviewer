@@ -18,7 +18,7 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextprotocol/sdk/types.js';
-import { handleCodexReview, handleGeminiReview, handleMultiReview, ReviewInputSchema, TOOL_DEFINITIONS } from './tools/feedback.js';
+import { handleCodexReview, handleGeminiReview, handleClaudeReview, handleMultiReview, ReviewInputSchema, TOOL_DEFINITIONS } from './tools/feedback.js';
 import { logCliStatus } from './cli/check.js';
 import { installCommands } from './commands.js';
 // Read version from package.json
@@ -62,6 +62,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         tools: [
             TOOL_DEFINITIONS.codex_review,
             TOOL_DEFINITIONS.gemini_review,
+            TOOL_DEFINITIONS.claude_review,
             TOOL_DEFINITIONS.multi_review,
         ],
     };
@@ -78,6 +79,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             case 'gemini_review': {
                 const input = ReviewInputSchema.parse(args);
                 return await handleGeminiReview(input);
+            }
+            case 'claude_review': {
+                const input = ReviewInputSchema.parse(args);
+                return await handleClaudeReview(input);
             }
             case 'multi_review': {
                 const input = ReviewInputSchema.parse(args);

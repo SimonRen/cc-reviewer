@@ -1,13 +1,13 @@
 # Multi Review
 
-Get parallel reviews from both Codex and Gemini, raw output for manual synthesis.
+Get parallel reviews from Codex, Gemini, and a fresh Claude (Opus) instance, raw output for manual synthesis.
 
 ## Arguments
 - `$ARGUMENTS` - Optional: focus area or custom instructions
 
 ## When to Use
 
-Use `/multi-review` when you want parallel reviews from both Codex and Gemini.
+Use `/multi-review` when you want parallel reviews from Codex, Gemini, and a fresh Claude (Opus) instance.
 
 ## Before Calling - PREPARE THE HANDOFF
 

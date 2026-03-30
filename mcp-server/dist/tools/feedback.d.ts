@@ -46,6 +46,12 @@ export declare function handleGeminiReview(input: ReviewInput): Promise<{
         text: string;
     }>;
 }>;
+export declare function handleClaudeReview(input: ReviewInput): Promise<{
+    content: Array<{
+        type: 'text';
+        text: string;
+    }>;
+}>;
 export declare function handleMultiReview(input: ReviewInput): Promise<{
     content: Array<{
         type: 'text';
@@ -106,6 +112,48 @@ export declare const TOOL_DEFINITIONS: {
         };
     };
     gemini_review: {
+        name: string;
+        description: string;
+        inputSchema: {
+            type: string;
+            properties: {
+                workingDir: {
+                    type: string;
+                    description: string;
+                };
+                ccOutput: {
+                    type: string;
+                    description: string;
+                };
+                outputType: {
+                    type: string;
+                    enum: string[];
+                    description: string;
+                };
+                analyzedFiles: {
+                    type: string;
+                    items: {
+                        type: string;
+                    };
+                    description: string;
+                };
+                focusAreas: {
+                    type: string;
+                    items: {
+                        type: string;
+                        enum: string[];
+                    };
+                    description: string;
+                };
+                customPrompt: {
+                    type: string;
+                    description: string;
+                };
+            };
+            required: string[];
+        };
+    };
+    claude_review: {
         name: string;
         description: string;
         inputSchema: {

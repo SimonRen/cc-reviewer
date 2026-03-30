@@ -9,19 +9,22 @@ import { FeedbackError, CliType } from './types.js';
 // Gemini: https://github.com/google-gemini/gemini-cli
 const INSTALL_COMMANDS: Record<CliType, string> = {
   codex: 'npm install -g @openai/codex-cli',
-  gemini: 'npm install -g @google/gemini-cli'
+  gemini: 'npm install -g @google/gemini-cli',
+  claude: 'https://docs.anthropic.com/en/docs/claude-code'
 };
 
 // Environment variables for API keys
 const ENV_VARS: Record<CliType, string> = {
   codex: 'OPENAI_API_KEY',
-  gemini: 'GEMINI_API_KEY'
+  gemini: 'GEMINI_API_KEY',
+  claude: 'ANTHROPIC_API_KEY'
 };
 
 // Authentication commands
 const AUTH_COMMANDS: Record<CliType, string> = {
   codex: 'codex login',
-  gemini: 'gemini (follow prompts)'
+  gemini: 'gemini (follow prompts)',
+  claude: 'claude auth'
 };
 
 /**
@@ -95,7 +98,8 @@ export function createCliError(cli: CliType, exitCode: number, stderr: string): 
  * Format an error for user display
  */
 export function formatErrorForUser(error: FeedbackError): string {
-  const otherCli: CliType = error.cli === 'codex' ? 'gemini' : 'codex';
+  const others: CliType[] = (['codex', 'gemini', 'claude'] as CliType[]).filter(c => c !== error.cli);
+  const otherCli = others[0];
 
   switch (error.type) {
     case 'cli_not_found':

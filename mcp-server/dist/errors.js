@@ -6,17 +6,20 @@
 // Gemini: https://github.com/google-gemini/gemini-cli
 const INSTALL_COMMANDS = {
     codex: 'npm install -g @openai/codex-cli',
-    gemini: 'npm install -g @google/gemini-cli'
+    gemini: 'npm install -g @google/gemini-cli',
+    claude: 'https://docs.anthropic.com/en/docs/claude-code'
 };
 // Environment variables for API keys
 const ENV_VARS = {
     codex: 'OPENAI_API_KEY',
-    gemini: 'GEMINI_API_KEY'
+    gemini: 'GEMINI_API_KEY',
+    claude: 'ANTHROPIC_API_KEY'
 };
 // Authentication commands
 const AUTH_COMMANDS = {
     codex: 'codex login',
-    gemini: 'gemini (follow prompts)'
+    gemini: 'gemini (follow prompts)',
+    claude: 'claude auth'
 };
 /**
  * Create a CLI not found error
@@ -83,7 +86,8 @@ export function createCliError(cli, exitCode, stderr) {
  * Format an error for user display
  */
 export function formatErrorForUser(error) {
-    const otherCli = error.cli === 'codex' ? 'gemini' : 'codex';
+    const others = ['codex', 'gemini', 'claude'].filter(c => c !== error.cli);
+    const otherCli = others[0];
     switch (error.type) {
         case 'cli_not_found':
             return `❌ ${error.cli} CLI not found.

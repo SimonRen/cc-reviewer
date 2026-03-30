@@ -26,6 +26,7 @@ import {
 import {
   handleCodexReview,
   handleGeminiReview,
+  handleClaudeReview,
   handleMultiReview,
   ReviewInputSchema,
   TOOL_DEFINITIONS
@@ -80,6 +81,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       TOOL_DEFINITIONS.codex_review,
       TOOL_DEFINITIONS.gemini_review,
+      TOOL_DEFINITIONS.claude_review,
       TOOL_DEFINITIONS.multi_review,
     ],
   };
@@ -99,6 +101,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'gemini_review': {
         const input = ReviewInputSchema.parse(args);
         return await handleGeminiReview(input);
+      }
+
+      case 'claude_review': {
+        const input = ReviewInputSchema.parse(args);
+        return await handleClaudeReview(input);
       }
 
       case 'multi_review': {

@@ -22,11 +22,12 @@ async function commandExists(command) {
  * Check availability of all supported CLIs
  */
 export async function checkCliAvailability() {
-    const [codex, gemini] = await Promise.all([
+    const [codex, gemini, claude] = await Promise.all([
         commandExists('codex'),
-        commandExists('gemini')
+        commandExists('gemini'),
+        commandExists('claude')
     ]);
-    return { codex, gemini };
+    return { codex, gemini, claude };
 }
 /**
  * Check if a specific CLI is available
@@ -67,9 +68,11 @@ export async function logCliStatus() {
     console.error('AI Reviewer CLI Status:');
     console.error(`  - Codex: ${status.codex ? '✓ Available' : '✗ Not found'}`);
     console.error(`  - Gemini: ${status.gemini ? '✓ Available' : '✗ Not found'}`);
-    if (!status.codex && !status.gemini) {
-        console.error('\nWarning: No AI CLIs found. Install with:');
+    console.error(`  - Claude: ${status.claude ? '✓ Available' : '✗ Not found'}`);
+    if (!status.codex && !status.gemini && !status.claude) {
+        console.error('\nWarning: No AI CLIs found. Install at least one:');
         console.error('  npm install -g @openai/codex-cli');
         console.error('  npm install -g @google/gemini-cli');
+        console.error('  Claude Code: https://docs.anthropic.com/en/docs/claude-code');
     }
 }

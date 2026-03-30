@@ -5,6 +5,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { CodexEventDecoder } from '../decoders/codex.js';
 import { GeminiEventDecoder } from '../decoders/gemini.js';
+import { ClaudeEventDecoder } from '../decoders/claude.js';
 
 // =============================================================================
 // TEST HELPERS
@@ -316,5 +317,141 @@ describe('GeminiEventDecoder — getStats', () => {
       output_tokens: 20,
       duration_ms: 5000,
     });
+  });
+});
+
+// =============================================================================
+// CLAUDE EVENT DECODER TESTS
+// =============================================================================
+
+describe('ClaudeEventDecoder — getFinalResponse', () => {
+  it('returns null when no events processed', () => {
+    const decoder = new ClaudeEventDecoder();
+    expect(decoder.getFinalResponse()).toBeNull();
+  });
+
+  it('extracts result from success result event', () => {
+    const decoder = new ClaudeEventDecoder();
+    const lines = [
+      '{"type":"system","subtype":"init","model":"claude-opus-4-6","session_id":"abc"}',
+      '{"type":"assistant","message":{"content":[{"type":"text","text":"review findings here"}],"usage":{"input_tokens":100,"output_tokens":50}}}',
+      '{"type":"result","subtype":"success","is_error":false,"result":"review findings here","duration_ms":5000,"usage":{"input_tokens":100,"output_tokens":50}}',
+    ];
+
+    for (const line of lines) {
+      decoder.processLine(line);
+    }
+
+    expect(decoder.getFinalResponse()).toBe('review findings here');
+  });
+
+  it('captures error from error result event', () => {
+    const decoder = new ClaudeEventDecoder();
+    decoder.processLine('{"type":"result","subtype":"error","is_error":true,"result":"rate limit exceeded","duration_ms":100}');
+
+    expect(decoder.getError()).toBe('rate limit exceeded');
+    expect(decoder.getFinalResponse()).toBeNull();
+  });
+
+  it('captures error from error type event', () => {
+    const decoder = new ClaudeEventDecoder();
+    decoder.processLine('{"type":"error","result":"something went wrong"}');
+
+    expect(decoder.getError()).toBe('something went wrong');
+  });
+});
+
+describe('ClaudeEventDecoder — getUsage', () => {
+  it('returns null when no events processed', () => {
+    const decoder = new ClaudeEventDecoder();
+    expect(decoder.getUsage()).toBeNull();
+  });
+
+  it('extracts usage from result event', () => {
+    const decoder = new ClaudeEventDecoder();
+    decoder.processLine('{"type":"result","subtype":"success","result":"ok","usage":{"input_tokens":200,"output_tokens":75,"cache_read_input_tokens":50}}');
+
+    const usage = decoder.getUsage();
+    expect(usage).not.toBeNull();
+    expect(usage!.input_tokens).toBe(200);
+    expect(usage!.output_tokens).toBe(75);
+    expect(usage!.cache_read_input_tokens).toBe(50);
+  });
+
+  it('extracts usage from assistant message', () => {
+    const decoder = new ClaudeEventDecoder();
+    decoder.processLine('{"type":"assistant","message":{"content":[{"type":"text","text":"hi"}],"usage":{"input_tokens":100,"output_tokens":25}}}');
+
+    const usage = decoder.getUsage();
+    expect(usage).not.toBeNull();
+    expect(usage!.input_tokens).toBe(100);
+    expect(usage!.output_tokens).toBe(25);
+  });
+});
+
+describe('ClaudeEventDecoder — getDurationMs', () => {
+  it('returns null when no result event processed', () => {
+    const decoder = new ClaudeEventDecoder();
+    expect(decoder.getDurationMs()).toBeNull();
+  });
+
+  it('extracts duration from result event', () => {
+    const decoder = new ClaudeEventDecoder();
+    decoder.processLine('{"type":"result","subtype":"success","result":"ok","duration_ms":12345}');
+    expect(decoder.getDurationMs()).toBe(12345);
+  });
+});
+
+describe('ClaudeEventDecoder — onProgress', () => {
+  it('calls onProgress for valid events', () => {
+    const decoder = new ClaudeEventDecoder();
+    const events: string[] = [];
+    decoder.onProgress = (type) => events.push(type);
+
+    decoder.processLine('{"type":"system","subtype":"init","model":"opus"}');
+    decoder.processLine('{"type":"assistant","message":{"content":[]}}');
+    decoder.processLine('{"type":"result","subtype":"success","result":"done"}');
+
+    expect(events).toEqual(['system', 'assistant', 'result']);
+  });
+});
+
+describe('ClaudeEventDecoder — malformed input', () => {
+  it('handles malformed JSONL lines gracefully', () => {
+    const decoder = new ClaudeEventDecoder();
+    expect(() => decoder.processLine('not json')).not.toThrow();
+    expect(decoder.getFinalResponse()).toBeNull();
+  });
+
+  it('skips events without type field', () => {
+    const decoder = new ClaudeEventDecoder();
+    decoder.processLine('{"data":"no type field"}');
+    expect(decoder.getFinalResponse()).toBeNull();
+  });
+
+  it('continues processing after malformed lines', () => {
+    const decoder = new ClaudeEventDecoder();
+    decoder.processLine('broken');
+    decoder.processLine('{"type":"result","subtype":"success","result":"recovered"}');
+    expect(decoder.getFinalResponse()).toBe('recovered');
+  });
+});
+
+describe('ClaudeEventDecoder — hasNoOutput', () => {
+  it('returns false when no events processed', () => {
+    const decoder = new ClaudeEventDecoder();
+    expect(decoder.hasNoOutput()).toBe(false);
+  });
+
+  it('returns true when events processed but no response', () => {
+    const decoder = new ClaudeEventDecoder();
+    decoder.processLine('{"type":"system","subtype":"init"}');
+    expect(decoder.hasNoOutput()).toBe(true);
+  });
+
+  it('returns false when response was received', () => {
+    const decoder = new ClaudeEventDecoder();
+    decoder.processLine('{"type":"result","subtype":"success","result":"ok"}');
+    expect(decoder.hasNoOutput()).toBe(false);
   });
 });

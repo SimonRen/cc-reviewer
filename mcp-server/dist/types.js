@@ -11,6 +11,11 @@ export const REVIEWER_PERSONAS = {
         name: 'Gemini',
         focus: 'design patterns, scalability, tech debt',
         style: 'Think holistically - consider broader context.'
+    },
+    claude: {
+        name: 'Claude',
+        focus: 'deep analysis, correctness, security, architecture',
+        style: 'Fresh perspective with clean context - challenge assumptions.'
     }
 };
 // Focus area descriptions

@@ -73,6 +73,16 @@ export async function handleGeminiReview(input) {
     const result = await adapter.runReview(toReviewRequest(input));
     return { content: [{ type: 'text', text: formatResult(result, 'Gemini') }] };
 }
+export async function handleClaudeReview(input) {
+    const adapter = getAdapter('claude');
+    if (!adapter)
+        return { content: [{ type: 'text', text: '❌ Claude adapter not registered' }] };
+    const available = await adapter.isAvailable();
+    if (!available)
+        return { content: [{ type: 'text', text: '❌ Claude CLI not found.\n\nInstall Claude Code: https://docs.anthropic.com/en/docs/claude-code\n\nAlternative: Use codex_review or gemini_review instead' }] };
+    const result = await adapter.runReview(toReviewRequest(input));
+    return { content: [{ type: 'text', text: formatResult(result, 'Claude (Opus)') }] };
+}
 // =============================================================================
 // MULTI-MODEL HANDLER
 // =============================================================================
@@ -140,9 +150,25 @@ export const TOOL_DEFINITIONS = {
             required: ['workingDir', 'ccOutput', 'outputType']
         }
     },
+    claude_review: {
+        name: 'claude_review',
+        description: "ONLY use when user explicitly requests '/claude-review' or 'review with claude'. Get second-opinion from a fresh Claude (Opus) instance with clean context — no memory of this session. Excels at deep analysis across all dimensions. DO NOT use for general 'review' requests.",
+        inputSchema: {
+            type: 'object',
+            properties: {
+                workingDir: { type: 'string', description: 'Working directory for the CLI to operate in' },
+                ccOutput: { type: 'string', description: "Claude Code's output to review (findings, plan, analysis)" },
+                outputType: { type: 'string', enum: ['plan', 'findings', 'analysis', 'proposal'], description: 'Type of output being reviewed' },
+                analyzedFiles: { type: 'array', items: { type: 'string' }, description: 'File paths that CC analyzed' },
+                focusAreas: { type: 'array', items: { type: 'string', enum: ['security', 'performance', 'architecture', 'correctness', 'maintainability', 'scalability', 'testing', 'documentation'] }, description: 'Areas to focus the review on' },
+                customPrompt: { type: 'string', description: 'Custom instructions for the reviewer' },
+            },
+            required: ['workingDir', 'ccOutput', 'outputType']
+        }
+    },
     multi_review: {
         name: 'multi_review',
-        description: "ONLY use when user explicitly requests '/multi-review' or 'review with both codex and gemini'. Get parallel second-opinions from both external CLIs (Codex and Gemini). Returns combined reviews for synthesis. DO NOT use for general 'review' requests.",
+        description: "ONLY use when user explicitly requests '/multi-review' or 'review with all models'. Get parallel second-opinions from Codex, Gemini, and a fresh Claude (Opus) instance. Returns combined reviews for synthesis. DO NOT use for general 'review' requests.",
         inputSchema: {
             type: 'object',
             properties: {

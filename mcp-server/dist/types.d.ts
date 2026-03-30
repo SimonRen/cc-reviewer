@@ -3,7 +3,7 @@
  */
 export type OutputType = 'plan' | 'findings' | 'analysis' | 'proposal';
 export type FocusArea = 'security' | 'performance' | 'architecture' | 'correctness' | 'maintainability' | 'scalability' | 'testing' | 'documentation';
-export type CliType = 'codex' | 'gemini';
+export type CliType = 'codex' | 'gemini' | 'claude';
 export type ReasoningEffort = 'high' | 'xhigh';
 export type ServiceTier = 'default' | 'fast' | 'flex';
 export interface FeedbackRequest {
@@ -69,6 +69,7 @@ export interface MultiFeedbackResult {
 export interface CliStatus {
     codex: boolean;
     gemini: boolean;
+    claude: boolean;
 }
 export interface StructuredFeedback {
     agreements: Array<{
