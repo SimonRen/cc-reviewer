@@ -166,16 +166,19 @@ export class CodexAdapter implements ReviewerAdapter {
     // Check for errors captured from JSONL events
     const decoderError = decoder.getError();
     if (decoderError) {
-      return { stdout: '', stderr: decoderError, exitCode: 1, truncated: false };
+      const combined = result.stderr ? `${decoderError}\n\nCLI stderr: ${result.stderr}` : decoderError;
+      return { stdout: '', stderr: combined, exitCode: 1, truncated: false };
     }
 
     const finalResponse = decoder.getFinalResponse();
     if (!finalResponse && decoder.hasNoOutput()) {
-      return { stdout: '', stderr: 'No response from Codex — possible rate limit or model rejection', exitCode: 1, truncated: false };
+      const combined = result.stderr ? `No output from Codex\n\nCLI stderr: ${result.stderr}` : 'No output from Codex';
+      return { stdout: '', stderr: combined, exitCode: 1, truncated: false };
     }
 
     if (!finalResponse) {
-      return { stdout: '', stderr: 'Codex produced no result event — review may have failed silently', exitCode: 1, truncated: false };
+      const combined = result.stderr ? `No result event from Codex\n\nCLI stderr: ${result.stderr}` : 'No result event from Codex';
+      return { stdout: '', stderr: combined, exitCode: 1, truncated: false };
     }
 
     return {
@@ -205,7 +208,7 @@ export class CodexAdapter implements ReviewerAdapter {
 
   private categorizeError(stderr: string): ReviewError {
     const lower = stderr.toLowerCase();
-    if (lower.includes('rate limit') || lower.includes('possible rate limit') || lower.includes('no response from codex')) {
+    if (lower.includes('rate limit') || lower.includes('rate_limit')) {
       return { type: 'rate_limit', message: `Codex rate limit: ${stderr.slice(0, 500)}` };
     }
     if (lower.includes('unauthorized') || lower.includes('authentication') || stderr.includes('401') || stderr.includes('403')) {

@@ -164,16 +164,19 @@ export class ClaudeAdapter implements ReviewerAdapter {
     // Check for errors captured from stream events
     const decoderError = decoder.getError();
     if (decoderError) {
-      return { stdout: '', stderr: decoderError, exitCode: 1, truncated: false };
+      const combined = result.stderr ? `${decoderError}\n\nCLI stderr: ${result.stderr}` : decoderError;
+      return { stdout: '', stderr: combined, exitCode: 1, truncated: false };
     }
 
     const finalResponse = decoder.getFinalResponse();
     if (!finalResponse && decoder.hasNoOutput()) {
-      return { stdout: '', stderr: 'No response from Claude — possible rate limit or auth issue', exitCode: 1, truncated: false };
+      const combined = result.stderr ? `No output from Claude\n\nCLI stderr: ${result.stderr}` : 'No output from Claude';
+      return { stdout: '', stderr: combined, exitCode: 1, truncated: false };
     }
 
     if (!finalResponse) {
-      return { stdout: '', stderr: 'Claude produced no result event — review may have failed silently', exitCode: 1, truncated: false };
+      const combined = result.stderr ? `No result event from Claude\n\nCLI stderr: ${result.stderr}` : 'No result event from Claude';
+      return { stdout: '', stderr: combined, exitCode: 1, truncated: false };
     }
 
     return {
@@ -203,7 +206,7 @@ export class ClaudeAdapter implements ReviewerAdapter {
 
   private categorizeError(stderr: string): ReviewError {
     const lower = stderr.toLowerCase();
-    if (lower.includes('rate limit') || lower.includes('quota') || lower.includes('no response from claude')) {
+    if (lower.includes('rate limit') || lower.includes('rate_limit') || lower.includes('quota')) {
       return { type: 'rate_limit', message: `Claude rate limit: ${stderr.slice(0, 500)}` };
     }
     if (lower.includes('unauthorized') || lower.includes('authentication') || lower.includes('api key') || stderr.includes('401') || stderr.includes('403')) {
