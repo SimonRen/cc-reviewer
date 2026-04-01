@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildHandoffPrompt, Handoff } from '../handoff.js';
+import { buildHandoffPrompt, buildAdversarialHandoffPrompt, ADVERSARIAL_REVIEWER, Handoff } from '../handoff.js';
 
 describe('handoff prompt building', () => {
   const mockHandoff: Handoff = {
@@ -48,6 +48,62 @@ describe('handoff prompt building', () => {
     const handoff: Handoff = { workingDir: '/test/dir', summary: 'Test' };
     const prompt = buildHandoffPrompt({ handoff });
     expect(prompt).not.toContain('ADDITIONAL INSTRUCTIONS');
+  });
+});
+
+describe('adversarial handoff prompt', () => {
+  const mockHandoff: Handoff = {
+    workingDir: '/test/dir',
+    summary: 'Implemented caching layer with Redis',
+    uncertainties: [{ topic: 'TTL', question: 'Is 5min TTL right?', severity: 'important' }],
+    priorityFiles: ['src/cache.ts'],
+  };
+
+  it('should use ADVERSARIAL_REVIEWER role', () => {
+    const prompt = buildAdversarialHandoffPrompt({ handoff: mockHandoff });
+    expect(prompt).toContain(`# ROLE: ${ADVERSARIAL_REVIEWER.name}`);
+    expect(prompt).toContain('break confidence');
+  });
+
+  it('should contain all adversarial stance sections', () => {
+    const prompt = buildAdversarialHandoffPrompt({ handoff: mockHandoff });
+    expect(prompt).toContain('<operating_stance>');
+    expect(prompt).toContain('</operating_stance>');
+    expect(prompt).toContain('<attack_surface>');
+    expect(prompt).toContain('</attack_surface>');
+    expect(prompt).toContain('<review_method>');
+    expect(prompt).toContain('</review_method>');
+    expect(prompt).toContain('<finding_bar>');
+    expect(prompt).toContain('</finding_bar>');
+    expect(prompt).toContain('<calibration_rules>');
+    expect(prompt).toContain('</calibration_rules>');
+    expect(prompt).toContain('<grounding_rules>');
+    expect(prompt).toContain('</grounding_rules>');
+  });
+
+  it('should include standard handoff sections (task, uncertainties, files)', () => {
+    const prompt = buildAdversarialHandoffPrompt({ handoff: mockHandoff });
+    expect(prompt).toContain('## YOUR TASK');
+    expect(prompt).toContain('Review code in `/test/dir`');
+    expect(prompt).toContain('READ-ONLY');
+    expect(prompt).toContain("## CC'S UNCERTAINTIES");
+    expect(prompt).toContain('## PRIORITY FILES');
+  });
+
+  it('should include customInstructions as adversarial focus', () => {
+    const handoff: Handoff = {
+      workingDir: '/test/dir',
+      summary: 'Test',
+      customInstructions: 'Focus on race conditions and rollback safety',
+    };
+    const prompt = buildAdversarialHandoffPrompt({ handoff });
+    expect(prompt).toContain('## ADVERSARIAL FOCUS');
+    expect(prompt).toContain('race conditions and rollback safety');
+  });
+
+  it('should omit adversarial focus section when no customInstructions', () => {
+    const prompt = buildAdversarialHandoffPrompt({ handoff: mockHandoff });
+    expect(prompt).not.toContain('## ADVERSARIAL FOCUS');
   });
 });
 

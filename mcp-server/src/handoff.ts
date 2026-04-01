@@ -201,6 +201,130 @@ export function selectRole(focusAreas?: FocusArea[]): ReviewerRole {
 }
 
 // =============================================================================
+// ADVERSARIAL REVIEWER — Challenge mode for multi_review
+// =============================================================================
+
+export const ADVERSARIAL_REVIEWER: ReviewerRole = {
+  id: 'adversarial',
+  name: 'Adversarial Reviewer',
+  description: 'Actively tries to break confidence in the change — challenges assumptions, not just bugs',
+  isGeneric: false,
+  applicableFocusAreas: [],
+  systemPrompt: `Senior staff engineer performing an adversarial review. Your job is to break confidence in the change, not to validate it.`,
+};
+
+/**
+ * Build an adversarial handoff prompt with challenge-mode stance sections.
+ * Same structure as buildHandoffPrompt but adds adversarial XML sections
+ * and uses the ADVERSARIAL_REVIEWER role.
+ */
+export function buildAdversarialHandoffPrompt(options: PromptOptions): string {
+  const { handoff } = options;
+  const role = ADVERSARIAL_REVIEWER;
+
+  const sections: string[] = [];
+
+  // SECTION 1: ROLE
+  sections.push(`# ROLE: ${role.name}\n\n${role.systemPrompt}`);
+
+  // SECTION 2: ADVERSARIAL STANCE
+  sections.push(`## ADVERSARIAL STANCE
+
+<operating_stance>
+Default to skepticism. Assume the change can fail in subtle, high-cost,
+or user-visible ways until the evidence says otherwise. Do not give credit
+for good intent, partial fixes, or likely follow-up work.
+</operating_stance>
+
+<attack_surface>
+Prioritized failure categories:
+1. Auth/permissions bypass
+2. Data loss or corruption
+3. Rollback safety
+4. Race conditions / concurrency
+5. Empty-state / null / timeout handling
+6. Version skew / backwards compatibility
+7. Observability gaps (missing logs, metrics, alerts)
+</attack_surface>
+
+<review_method>
+Actively try to disprove the change. Look for violated invariants,
+missing guards, unhandled failure paths. If the user supplied a focus area,
+weight it heavily, but still report any other material issue you can defend.
+</review_method>
+
+<finding_bar>
+Material findings only. Each must answer:
+1. What can go wrong?
+2. Why is this code path vulnerable?
+3. What is the likely impact?
+4. What concrete change would reduce the risk?
+</finding_bar>
+
+<calibration_rules>
+Prefer one strong finding over several weak ones. If you cannot defend
+a finding from the provided code, drop it.
+</calibration_rules>
+
+<grounding_rules>
+Be aggressive, but stay grounded. Every finding must be defensible from
+the repository context. No speculative findings. No "might be an issue"
+without concrete evidence from the code.
+</grounding_rules>`);
+
+  // SECTION 3: TASK (same as standard)
+  sections.push(`## YOUR TASK
+
+Review code in \`${handoff.workingDir}\`.
+
+**Summary:** ${handoff.summary}${handoff.confidence !== undefined && handoff.confidence < 0.9 ? `\n**CC Confidence:** ${Math.round(handoff.confidence * 100)}% — verify weak areas` : ''}
+
+**IMPORTANT:**
+- This is a READ-ONLY review. Do NOT create, modify, or delete any files. Only read files to verify claims.
+- Do NOT assume a git repository exists. Do NOT run git commands. Read files directly from the filesystem.`);
+
+  // SECTION 4: CC'S UNCERTAINTIES
+  if (handoff.uncertainties && handoff.uncertainties.length > 0) {
+    sections.push(`## CC'S UNCERTAINTIES
+
+${handoff.uncertainties.map((u, i) => `### ${i + 1}. ${u.topic} ${u.severity === 'critical' ? '⚠️' : ''}
+- **Question:** ${u.question}
+${u.ccAssumption ? `- **CC assumed:** ${u.ccAssumption}` : ''}
+${u.relevantFiles ? `- **Files:** ${u.relevantFiles.join(', ')}` : ''}`).join('\n\n')}`);
+  }
+
+  // SECTION 5: SPECIFIC QUESTIONS
+  if (handoff.questions && handoff.questions.length > 0) {
+    sections.push(`## QUESTIONS FROM CC
+
+${handoff.questions.map((q, i) => `${i + 1}. **${q.question}**
+   ${q.context ? `Context: ${q.context}` : ''}
+   ${q.ccGuess ? `CC Guess: ${q.ccGuess}` : ''}`).join('\n')}`);
+  }
+
+  // SECTION 6: DECISIONS TO EVALUATE
+  if (handoff.decisions && handoff.decisions.length > 0) {
+    sections.push(`## DECISIONS TO EVALUATE
+
+${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**
+   Rationale: ${d.rationale}
+   ${d.alternatives ? `Alternatives: ${d.alternatives.join(', ')}` : ''}`).join('\n')}`);
+  }
+
+  // SECTION 7: PRIORITY FILES
+  if (handoff.priorityFiles && handoff.priorityFiles.length > 0) {
+    sections.push(`## PRIORITY FILES\n\n${handoff.priorityFiles.map(f => `- \`${f}\``).join('\n')}`);
+  }
+
+  // SECTION 8: ADVERSARIAL FOCUS (customInstructions steers the challenge)
+  if (handoff.customInstructions) {
+    sections.push(`## ADVERSARIAL FOCUS\n\n${handoff.customInstructions}`);
+  }
+
+  return sections.join('\n\n');
+}
+
+// =============================================================================
 // PROMPT BUILDER - Minimal, Targeted
 // =============================================================================
 
