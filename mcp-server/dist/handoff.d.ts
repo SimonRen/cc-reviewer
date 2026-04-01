@@ -212,6 +212,13 @@ export declare const ROLES: Record<string, ReviewerRole>;
  * Select the best role based on focus areas
  */
 export declare function selectRole(focusAreas?: FocusArea[]): ReviewerRole;
+export declare const ADVERSARIAL_REVIEWER: ReviewerRole;
+/**
+ * Build an adversarial handoff prompt with challenge-mode stance sections.
+ * Same structure as buildHandoffPrompt but adds adversarial XML sections
+ * and uses the ADVERSARIAL_REVIEWER role.
+ */
+export declare function buildAdversarialHandoffPrompt(options: PromptOptions): string;
 export interface PromptOptions {
     handoff: Handoff;
     role?: ReviewerRole;

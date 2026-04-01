@@ -10,7 +10,7 @@ import { existsSync } from 'fs';
 import { registerAdapter, } from './base.js';
 import { CliExecutor } from '../executor.js';
 import { CodexEventDecoder } from '../decoders/index.js';
-import { buildSimpleHandoff, buildHandoffPrompt, selectRole, } from '../handoff.js';
+import { buildSimpleHandoff, buildHandoffPrompt, buildAdversarialHandoffPrompt, selectRole, } from '../handoff.js';
 // =============================================================================
 // CONFIGURATION
 // =============================================================================
@@ -59,8 +59,9 @@ export class CodexAdapter {
         }
         try {
             const handoff = buildSimpleHandoff(request.workingDir, request.ccOutput, request.analyzedFiles, request.focusAreas, request.customPrompt);
-            const role = selectRole(request.focusAreas);
-            const prompt = buildHandoffPrompt({ handoff, role });
+            const prompt = request.reviewMode === 'adversarial'
+                ? buildAdversarialHandoffPrompt({ handoff })
+                : buildHandoffPrompt({ handoff, role: selectRole(request.focusAreas) });
             const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', request.serviceTier);
             if (result.exitCode !== 0) {
                 const error = this.categorizeError(result.stderr);

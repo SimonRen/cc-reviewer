@@ -41,6 +41,8 @@ export interface ReviewRequest {
     reasoningEffort?: ReasoningEffort;
     /** Service tier (for models that support it: priority = fast, flex = cheap) */
     serviceTier?: ServiceTier;
+    /** Review mode: standard finds bugs, adversarial challenges assumptions */
+    reviewMode?: 'standard' | 'adversarial';
 }
 /** @deprecated Use handoff.ts roles instead */
 export interface ExpertRole {
