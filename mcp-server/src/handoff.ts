@@ -4,9 +4,10 @@
  * Defines the minimal, targeted information that should flow from CC to reviewers.
  *
  * Philosophy:
- * - Reviewers have filesystem + git access - don't duplicate what they can discover
+ * - Reviewers have filesystem access - don't duplicate what they can discover
  * - Pass ONLY what CC uniquely knows: uncertainties, decisions, questions
- * - Let reviewer use their tools (git diff, file reading) for actual code
+ * - Let reviewer use their tools (file reading) for actual code
+ * - Do NOT assume git — working directory may not be a git repo
  */
 
 import { z } from 'zod';
@@ -124,7 +125,7 @@ export const CHANGE_FOCUSED_REVIEWER: ReviewerRole = {
   isGeneric: true,
   applicableFocusAreas: [],
   systemPrompt: `Change reviewer. Focus on: goal achievement, regressions, edge cases, side effects.
-Reference specific lines in the diff.`,
+Reference specific lines in the source files.`,
 };
 
 /**
@@ -224,11 +225,13 @@ export function buildHandoffPrompt(options: PromptOptions): string {
   // SECTION 2: TASK
   sections.push(`## YOUR TASK
 
-Review recent work in \`${handoff.workingDir}\`.
+Review code in \`${handoff.workingDir}\`.
 
 **Summary:** ${handoff.summary}${handoff.confidence !== undefined && handoff.confidence < 0.9 ? `\n**CC Confidence:** ${Math.round(handoff.confidence * 100)}% — verify weak areas` : ''}
 
-**IMPORTANT: This is a READ-ONLY review. Do NOT create, modify, or delete any files. Only read files to verify claims.**`);
+**IMPORTANT:**
+- This is a READ-ONLY review. Do NOT create, modify, or delete any files. Only read files to verify claims.
+- Do NOT assume a git repository exists. Do NOT run git commands. Read files directly from the filesystem.`);
 
   // SECTION 3: CC'S UNCERTAINTIES
   if (handoff.uncertainties && handoff.uncertainties.length > 0) {
@@ -261,6 +264,11 @@ ${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**
   // SECTION 6: PRIORITY FILES
   if (handoff.priorityFiles && handoff.priorityFiles.length > 0) {
     sections.push(`## PRIORITY FILES\n\n${handoff.priorityFiles.map(f => `- \`${f}\``).join('\n')}`);
+  }
+
+  // SECTION 7: CUSTOM INSTRUCTIONS
+  if (handoff.customInstructions) {
+    sections.push(`## ADDITIONAL INSTRUCTIONS\n\n${handoff.customInstructions}`);
   }
 
   return sections.join('\n\n');

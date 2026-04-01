@@ -147,6 +147,7 @@ ${request.customPrompt}`);
 CONSTRAINTS:
 • You have filesystem access - READ files to verify claims
 • Do NOT modify any files (advisory mode only)
+• Do NOT assume a git repository exists - do NOT run git commands
 • Reference specific file:line when making claims
 • Do NOT hallucinate file paths - verify they exist
 • Be skeptical - verify before agreeing with CC's findings`);

@@ -4,9 +4,10 @@
  * Defines the minimal, targeted information that should flow from CC to reviewers.
  *
  * Philosophy:
- * - Reviewers have filesystem + git access - don't duplicate what they can discover
+ * - Reviewers have filesystem access - don't duplicate what they can discover
  * - Pass ONLY what CC uniquely knows: uncertainties, decisions, questions
- * - Let reviewer use their tools (git diff, file reading) for actual code
+ * - Let reviewer use their tools (file reading) for actual code
+ * - Do NOT assume git — working directory may not be a git repo
  */
 import { z } from 'zod';
 import { FocusArea } from './types.js';
