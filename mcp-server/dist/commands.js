@@ -18,6 +18,7 @@ const DEPRECATED_COMMANDS = [
     'ask-codex.md',
     'ask-gemini.md',
     'ask-multi.md',
+    'multi-review-adv.md',
 ];
 /**
  * Get source and target paths for command files

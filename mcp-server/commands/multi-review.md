@@ -1,13 +1,25 @@
 # Multi Review
 
-Get parallel reviews from Codex, Gemini, and a fresh Claude (Opus) instance, raw output for manual synthesis.
+Get parallel standard AND adversarial reviews from all available models (Codex, Gemini, Claude Opus).
+
+Each model runs twice: once as a standard reviewer (finding bugs, issues, improvements) and once as an adversarial challenger (breaking confidence in the change, questioning assumptions, targeting hidden failure paths). Results are presented in two sections.
+
+Use `$ARGUMENTS` to steer the adversarial focus (e.g., "focus the challenge on race conditions and rollback safety").
 
 ## Arguments
-- `$ARGUMENTS` - Optional: focus area or custom instructions
+- `$ARGUMENTS` - Optional: focus area, custom instructions, or adversarial steering
 
 ## When to Use
 
-Use `/multi-review` when you want parallel reviews from Codex, Gemini, and a fresh Claude (Opus) instance.
+Use `/multi-review` when you want thorough parallel reviews from all available models. Every invocation includes both standard and adversarial passes.
+
+## Examples
+
+```
+/multi-review
+/multi-review focus the challenge on race conditions and rollback safety
+/multi-review challenge whether this was the right caching and retry design
+```
 
 ## Before Calling - PREPARE THE HANDOFF
 
@@ -22,7 +34,6 @@ Added cache invalidation on product updates."
 UNCERTAINTIES:
 - "Is the cache TTL appropriate for this data?"
 - "Does the invalidation handle all update scenarios?"
-- "Is the Redis connection pooling configured correctly?"
 ```
 
 ### 3. Ask Specific Questions
@@ -42,7 +53,7 @@ Call `multi_review` with:
   "ccOutput": "<structured handoff>",
   "outputType": "analysis",
   "focusAreas": ["<from $ARGUMENTS>"],
-  "serviceTier": "<see below>"
+  "customPrompt": "<steering text from $ARGUMENTS for adversarial focus>"
 }
 ```
 
@@ -70,21 +81,22 @@ PRIORITY FILES:
 
 ## After Receiving Review
 
-You will receive separate reviews from each model.
+You will receive two sections: **Standard Review Findings** and **Challenge Review Findings**.
 
-### Synthesize Manually
+### Synthesize
 
-1. **Find agreements** (both models say same thing)
-   - Higher confidence
-   - Still verify yourself
+1. **Standard findings** — bugs, issues, improvements from each model
+   - Find agreements across models (higher confidence)
+   - Identify conflicts (YOU decide who's right)
 
-2. **Identify conflicts** (they disagree)
-   - Read the code
-   - YOU decide who's right
+2. **Challenge findings** — adversarial challenges from each model
+   - These target assumptions and design decisions, not just bugs
+   - Evaluate on merit — some challenges are speculative by design
+   - Strong challenges with evidence deserve serious consideration
 
-3. **Note unique insights**
-   - Findings only one model found
-   - Evaluate on merit
+3. **Cross-reference** standard vs challenge findings
+   - Standard + challenge agreement = high confidence issue
+   - Challenge-only finding = investigate further before acting
 
 4. **Verify all findings**
    - Check file/line references exist

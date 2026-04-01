@@ -58,12 +58,6 @@ export declare function handleMultiReview(input: ReviewInput): Promise<{
         text: string;
     }>;
 }>;
-export declare function handleMultiAdversarialReview(input: ReviewInput): Promise<{
-    content: Array<{
-        type: 'text';
-        text: string;
-    }>;
-}>;
 export declare const TOOL_DEFINITIONS: {
     codex_review: {
         name: string;
@@ -202,53 +196,6 @@ export declare const TOOL_DEFINITIONS: {
         };
     };
     multi_review: {
-        name: string;
-        description: string;
-        inputSchema: {
-            type: string;
-            properties: {
-                workingDir: {
-                    type: string;
-                    description: string;
-                };
-                ccOutput: {
-                    type: string;
-                    description: string;
-                };
-                outputType: {
-                    type: string;
-                    enum: string[];
-                    description: string;
-                };
-                analyzedFiles: {
-                    type: string;
-                    items: {
-                        type: string;
-                    };
-                    description: string;
-                };
-                focusAreas: {
-                    type: string;
-                    items: {
-                        type: string;
-                        enum: string[];
-                    };
-                    description: string;
-                };
-                customPrompt: {
-                    type: string;
-                    description: string;
-                };
-                serviceTier: {
-                    type: string;
-                    enum: string[];
-                    description: string;
-                };
-            };
-            required: string[];
-        };
-    };
-    multi_review_adv: {
         name: string;
         description: string;
         inputSchema: {

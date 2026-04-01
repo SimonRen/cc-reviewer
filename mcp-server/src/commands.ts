@@ -28,6 +28,7 @@ const DEPRECATED_COMMANDS = [
   'ask-codex.md',
   'ask-gemini.md',
   'ask-multi.md',
+  'multi-review-adv.md',
 ];
 
 /**

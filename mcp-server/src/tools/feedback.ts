@@ -114,62 +114,38 @@ export async function handleMultiReview(input: ReviewInput): Promise<{ content: 
     return { content: [{ type: 'text', text: '❌ No AI CLIs found.\n\nInstall at least one:\n  - Codex: npm install -g @openai/codex-cli\n  - Gemini: npm install -g @google/gemini-cli' }] };
   }
 
-  const results = await Promise.all(
-    availableAdapters.map(async (adapter) => {
-      const result = await adapter.runReview({ ...request });
-      return { adapter, result };
-    })
-  );
+  // Spawn 2 reviews per adapter: standard + adversarial (all in parallel)
+  const reviewPromises = availableAdapters.flatMap((adapter) => [
+    adapter.runReview({ ...request }).then(result => ({ adapter, result, mode: 'standard' as const })),
+    adapter.runReview({ ...request, reviewMode: 'adversarial' as const }).then(result => ({ adapter, result, mode: 'adversarial' as const })),
+  ]);
 
-  const lines: string[] = [];
+  const results = await Promise.all(reviewPromises);
+
+  const standardResults = results.filter(r => r.mode === 'standard');
+  const adversarialResults = results.filter(r => r.mode === 'adversarial');
+
   const allFailed = results.every(r => !r.result.success);
   const someFailed = results.some(r => !r.result.success);
+
+  const lines: string[] = [];
 
   if (allFailed) lines.push('## Multi-Model Review ❌ All Failed\n');
   else if (someFailed) lines.push('## Multi-Model Review ⚠️ Partial Success\n');
   else lines.push('## Multi-Model Review ✓\n');
 
-  lines.push(`**Models:** ${availableAdapters.map(a => a.id).join(', ')}\n`);
+  lines.push(`**Models:** ${availableAdapters.map(a => a.id).join(', ')} (standard + adversarial)\n`);
 
-  for (const { adapter, result } of results) {
+  // Standard section
+  lines.push('## Standard Review Findings\n');
+  for (const { adapter, result } of standardResults) {
     lines.push(formatResult(result, adapter.getCapabilities().name));
     lines.push('');
   }
 
-  return { content: [{ type: 'text', text: lines.join('\n') }] };
-}
-
-// =============================================================================
-// MULTI-MODEL ADVERSARIAL HANDLER
-// =============================================================================
-
-export async function handleMultiAdversarialReview(input: ReviewInput): Promise<{ content: Array<{ type: 'text'; text: string }> }> {
-  const request = toReviewRequest(input);
-  const availableAdapters = await getAvailableAdapters();
-
-  if (availableAdapters.length === 0) {
-    return { content: [{ type: 'text', text: '❌ No AI CLIs found.\n\nInstall at least one:\n  - Codex: npm install -g @openai/codex-cli\n  - Gemini: npm install -g @google/gemini-cli' }] };
-  }
-
-  // All reviews run in adversarial mode
-  const results = await Promise.all(
-    availableAdapters.map(async (adapter) => {
-      const result = await adapter.runReview({ ...request, reviewMode: 'adversarial' });
-      return { adapter, result };
-    })
-  );
-
-  const lines: string[] = [];
-  const allFailed = results.every(r => !r.result.success);
-  const someFailed = results.some(r => !r.result.success);
-
-  if (allFailed) lines.push('## Adversarial Challenge Review ❌ All Failed\n');
-  else if (someFailed) lines.push('## Adversarial Challenge Review ⚠️ Partial Success\n');
-  else lines.push('## Adversarial Challenge Review ✓\n');
-
-  lines.push(`**Models:** ${availableAdapters.map(a => a.id).join(', ')} (adversarial mode)\n`);
-
-  for (const { adapter, result } of results) {
+  // Adversarial section
+  lines.push('## Challenge Review Findings\n');
+  for (const { adapter, result } of adversarialResults) {
     lines.push(formatResult(result, `${adapter.getCapabilities().name} (Adversarial)`));
     lines.push('');
   }
@@ -234,7 +210,7 @@ export const TOOL_DEFINITIONS = {
   },
   multi_review: {
     name: 'multi_review',
-    description: "ONLY use when user explicitly requests '/multi-review' or 'review with all models'. Get parallel second-opinions from Codex, Gemini, and a fresh Claude (Opus) instance. Returns combined reviews for synthesis. DO NOT use for general 'review' requests.",
+    description: "ONLY use when user explicitly requests '/multi-review' or 'review with all models'. Runs parallel standard AND adversarial reviews from all available models. Each model reviews twice: standard (bugs/issues) + adversarial (challenge assumptions/design decisions). Use customPrompt to steer the adversarial focus. DO NOT use for general 'review' requests.",
     inputSchema: {
       type: 'object',
       properties: {
@@ -243,24 +219,7 @@ export const TOOL_DEFINITIONS = {
         outputType: { type: 'string', enum: ['plan', 'findings', 'analysis', 'proposal'], description: 'Type of output being reviewed' },
         analyzedFiles: { type: 'array', items: { type: 'string' }, description: 'File paths that CC analyzed' },
         focusAreas: { type: 'array', items: { type: 'string', enum: ['security', 'performance', 'architecture', 'correctness', 'maintainability', 'scalability', 'testing', 'documentation'] }, description: 'Areas to focus the review on' },
-        customPrompt: { type: 'string', description: 'Custom instructions for the reviewer' },
-        serviceTier: { type: 'string', enum: ['default', 'fast', 'flex'], description: 'Codex service tier (fast = priority processing, flex = cheaper/slower). Only applies to Codex.' }
-      },
-      required: ['workingDir', 'ccOutput', 'outputType']
-    }
-  },
-  multi_review_adv: {
-    name: 'multi_review_adv',
-    description: "ONLY use when user explicitly requests '/multi-review-adv' or 'adversarial review'. Run adversarial challenge reviews from all available models in parallel. Each model actively tries to break confidence in the change — targeting hidden assumptions, violated invariants, and unhandled failure paths. Use customPrompt to steer the adversarial focus. DO NOT use for general 'review' requests.",
-    inputSchema: {
-      type: 'object',
-      properties: {
-        workingDir: { type: 'string', description: 'Working directory for the CLI to operate in' },
-        ccOutput: { type: 'string', description: "Claude Code's output to review (findings, plan, analysis)" },
-        outputType: { type: 'string', enum: ['plan', 'findings', 'analysis', 'proposal'], description: 'Type of output being reviewed' },
-        analyzedFiles: { type: 'array', items: { type: 'string' }, description: 'File paths that CC analyzed' },
-        focusAreas: { type: 'array', items: { type: 'string', enum: ['security', 'performance', 'architecture', 'correctness', 'maintainability', 'scalability', 'testing', 'documentation'] }, description: 'Areas to focus the review on' },
-        customPrompt: { type: 'string', description: 'Steer the adversarial focus (e.g., "challenge the caching and retry design")' },
+        customPrompt: { type: 'string', description: 'Custom instructions for standard review + adversarial focus steering' },
         serviceTier: { type: 'string', enum: ['default', 'fast', 'flex'], description: 'Codex service tier (fast = priority processing, flex = cheaper/slower). Only applies to Codex.' }
       },
       required: ['workingDir', 'ccOutput', 'outputType']

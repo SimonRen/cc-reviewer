@@ -28,7 +28,6 @@ import {
   handleGeminiReview,
   handleClaudeReview,
   handleMultiReview,
-  handleMultiAdversarialReview,
   ReviewInputSchema,
   TOOL_DEFINITIONS
 } from './tools/feedback.js';
@@ -84,7 +83,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       TOOL_DEFINITIONS.gemini_review,
       TOOL_DEFINITIONS.claude_review,
       TOOL_DEFINITIONS.multi_review,
-      TOOL_DEFINITIONS.multi_review_adv,
     ],
   };
 });
@@ -113,11 +111,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case 'multi_review': {
         const input = ReviewInputSchema.parse(args);
         return await handleMultiReview(input);
-      }
-
-      case 'multi_review_adv': {
-        const input = ReviewInputSchema.parse(args);
-        return await handleMultiAdversarialReview(input);
       }
 
       default:
