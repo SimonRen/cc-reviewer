@@ -115,8 +115,10 @@ export async function handleMultiReview(input: ReviewInput): Promise<{ content: 
   }
 
   // Spawn 2 reviews per adapter: standard + adversarial (all in parallel)
+  // customPrompt steers the adversarial focus only — strip it from standard pass to avoid bias
+  const { customPrompt, ...standardRequest } = request;
   const reviewPromises = availableAdapters.flatMap((adapter) => [
-    adapter.runReview({ ...request }).then(result => ({ adapter, result, mode: 'standard' as const })),
+    adapter.runReview({ ...standardRequest }).then(result => ({ adapter, result, mode: 'standard' as const })),
     adapter.runReview({ ...request, reviewMode: 'adversarial' as const }).then(result => ({ adapter, result, mode: 'adversarial' as const })),
   ]);
 

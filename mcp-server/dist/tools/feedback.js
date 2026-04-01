@@ -93,8 +93,10 @@ export async function handleMultiReview(input) {
         return { content: [{ type: 'text', text: '❌ No AI CLIs found.\n\nInstall at least one:\n  - Codex: npm install -g @openai/codex-cli\n  - Gemini: npm install -g @google/gemini-cli' }] };
     }
     // Spawn 2 reviews per adapter: standard + adversarial (all in parallel)
+    // customPrompt steers the adversarial focus only — strip it from standard pass to avoid bias
+    const { customPrompt, ...standardRequest } = request;
     const reviewPromises = availableAdapters.flatMap((adapter) => [
-        adapter.runReview({ ...request }).then(result => ({ adapter, result, mode: 'standard' })),
+        adapter.runReview({ ...standardRequest }).then(result => ({ adapter, result, mode: 'standard' })),
         adapter.runReview({ ...request, reviewMode: 'adversarial' }).then(result => ({ adapter, result, mode: 'adversarial' })),
     ]);
     const results = await Promise.all(reviewPromises);
