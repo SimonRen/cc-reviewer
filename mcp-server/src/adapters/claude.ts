@@ -26,6 +26,7 @@ import { ClaudeEventDecoder } from '../decoders/index.js';
 import {
   buildSimpleHandoff,
   buildHandoffPrompt,
+  buildAdversarialHandoffPrompt,
   selectRole,
   FocusArea,
 } from '../handoff.js';
@@ -89,8 +90,9 @@ export class ClaudeAdapter implements ReviewerAdapter {
         request.workingDir, request.ccOutput,
         request.analyzedFiles, request.focusAreas, request.customPrompt
       );
-      const role = selectRole(request.focusAreas as FocusArea[] | undefined);
-      const prompt = buildHandoffPrompt({ handoff, role });
+      const prompt = request.reviewMode === 'adversarial'
+        ? buildAdversarialHandoffPrompt({ handoff })
+        : buildHandoffPrompt({ handoff, role: selectRole(request.focusAreas as FocusArea[] | undefined) });
 
       const result = await this.runCli(prompt, request.workingDir);
 
