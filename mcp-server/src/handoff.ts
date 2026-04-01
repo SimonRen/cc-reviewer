@@ -311,12 +311,17 @@ ${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**
    ${d.alternatives ? `Alternatives: ${d.alternatives.join(', ')}` : ''}`).join('\n')}`);
   }
 
-  // SECTION 7: PRIORITY FILES
+  // SECTION 7: FOCUS AREAS
+  if (handoff.focusAreas && handoff.focusAreas.length > 0) {
+    sections.push(`## FOCUS AREAS\n\nWeight these areas heavily in your adversarial analysis:\n${handoff.focusAreas.map(f => `- **${f}**`).join('\n')}`);
+  }
+
+  // SECTION 8: PRIORITY FILES
   if (handoff.priorityFiles && handoff.priorityFiles.length > 0) {
     sections.push(`## PRIORITY FILES\n\n${handoff.priorityFiles.map(f => `- \`${f}\``).join('\n')}`);
   }
 
-  // SECTION 8: ADVERSARIAL FOCUS (customInstructions steers the challenge)
+  // SECTION 9: ADVERSARIAL FOCUS (customInstructions steers the challenge)
   if (handoff.customInstructions) {
     sections.push(`## ADVERSARIAL FOCUS\n\n${handoff.customInstructions}`);
   }

@@ -105,5 +105,22 @@ describe('adversarial handoff prompt', () => {
     const prompt = buildAdversarialHandoffPrompt({ handoff: mockHandoff });
     expect(prompt).not.toContain('## ADVERSARIAL FOCUS');
   });
+
+  it('should render focusAreas in adversarial prompt', () => {
+    const handoff: Handoff = {
+      workingDir: '/test/dir',
+      summary: 'Test',
+      focusAreas: ['security', 'performance'],
+    };
+    const prompt = buildAdversarialHandoffPrompt({ handoff });
+    expect(prompt).toContain('## FOCUS AREAS');
+    expect(prompt).toContain('**security**');
+    expect(prompt).toContain('**performance**');
+  });
+
+  it('should omit focusAreas section when not provided', () => {
+    const prompt = buildAdversarialHandoffPrompt({ handoff: mockHandoff });
+    expect(prompt).not.toContain('## FOCUS AREAS');
+  });
 });
 
