@@ -209,7 +209,10 @@ export declare const ARCHITECTURE_REVIEWER: ReviewerRole;
 export declare const CORRECTNESS_REVIEWER: ReviewerRole;
 export declare const ROLES: Record<string, ReviewerRole>;
 /**
- * Select the best role based on focus areas
+ * Select and compose roles based on focus areas.
+ *
+ * When multiple focus areas map to different roles (e.g. security + performance),
+ * composes them into a single role with merged prompts instead of picking one winner.
  */
 export declare function selectRole(focusAreas?: FocusArea[]): ReviewerRole;
 export declare const ADVERSARIAL_REVIEWER: ReviewerRole;
@@ -229,7 +232,30 @@ export interface PromptOptions {
  */
 export declare function buildHandoffPrompt(options: PromptOptions): string;
 /**
- * Build a handoff from legacy simple inputs
+ * Parse structured ccOutput into Handoff fields.
+ *
+ * The slash commands tell CC to format its output as:
+ *   SUMMARY:
+ *   <text>
+ *
+ *   UNCERTAINTIES (verify these):
+ *   1. <text>
+ *
+ *   QUESTIONS:
+ *   1. <text>
+ *
+ *   PRIORITY FILES:
+ *   - <file>
+ *
+ * If no sections detected, returns { summary: ccOutput } (graceful fallback).
+ */
+export declare function parseStructuredCcOutput(ccOutput: string): Pick<Handoff, 'summary'> & Partial<Handoff>;
+/**
+ * Build a handoff from MCP tool inputs.
+ *
+ * Parses structured sections (SUMMARY, UNCERTAINTIES, QUESTIONS, PRIORITY FILES)
+ * from ccOutput when present, populating typed Handoff fields so reviewers
+ * receive machine-usable context instead of a single summary blob.
  */
 export declare function buildSimpleHandoff(workingDir: string, ccOutput: string, analyzedFiles?: string[], focusAreas?: string[], customPrompt?: string): Handoff;
 /**

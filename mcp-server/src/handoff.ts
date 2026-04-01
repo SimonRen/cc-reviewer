@@ -168,7 +168,8 @@ export const CORRECTNESS_REVIEWER: ReviewerRole = {
   isGeneric: false,
   applicableFocusAreas: ['correctness', 'testing'],
   systemPrompt: `Correctness analyst. Focus on logic errors, edge cases, race conditions, error handling.
-Provide triggering inputs and expected vs actual behavior.`,
+Provide triggering inputs and expected vs actual behavior.
+For significant bugs, suggest a concrete regression test (name, inputs, expected output).`,
 };
 
 // All roles indexed by ID
@@ -182,22 +183,39 @@ export const ROLES: Record<string, ReviewerRole> = {
 };
 
 /**
- * Select the best role based on focus areas
+ * Select and compose roles based on focus areas.
+ *
+ * When multiple focus areas map to different roles (e.g. security + performance),
+ * composes them into a single role with merged prompts instead of picking one winner.
  */
 export function selectRole(focusAreas?: FocusArea[]): ReviewerRole {
   if (!focusAreas || focusAreas.length === 0) {
     return COMPREHENSIVE_REVIEWER;
   }
 
+  // Collect all unique matching roles (preserving insertion order)
+  const matched = new Map<string, ReviewerRole>();
   for (const focus of focusAreas) {
     for (const role of Object.values(ROLES)) {
       if (!role.isGeneric && role.applicableFocusAreas.includes(focus)) {
-        return role;
+        matched.set(role.id, role);
       }
     }
   }
 
-  return CHANGE_FOCUSED_REVIEWER;
+  if (matched.size === 0) return CHANGE_FOCUSED_REVIEWER;
+  if (matched.size === 1) return [...matched.values()][0];
+
+  // Compose multiple roles into one
+  const roles = [...matched.values()];
+  return {
+    id: roles.map(r => r.id).join('+'),
+    name: roles.map(r => r.name).join(' + '),
+    description: roles.map(r => r.description).join('; '),
+    isGeneric: false,
+    applicableFocusAreas: focusAreas,
+    systemPrompt: roles.map(r => `**As ${r.name}:** ${r.systemPrompt}`).join('\n'),
+  };
 }
 
 // =============================================================================
@@ -306,9 +324,7 @@ ${handoff.questions.map((q, i) => `${i + 1}. **${q.question}**
   if (handoff.decisions && handoff.decisions.length > 0) {
     sections.push(`## DECISIONS TO EVALUATE
 
-${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**
-   Rationale: ${d.rationale}
-   ${d.alternatives ? `Alternatives: ${d.alternatives.join(', ')}` : ''}`).join('\n')}`);
+${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**${d.rationale ? `\n   Rationale: ${d.rationale}` : ''}${d.alternatives ? `\n   Alternatives: ${d.alternatives.join(', ')}` : ''}`).join('\n')}`);
   }
 
   // SECTION 7: FOCUS AREAS
@@ -328,6 +344,72 @@ ${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**
 
   return sections.join('\n\n');
 }
+
+// =============================================================================
+// FOCUS-AREA CHECKLISTS — Specific patterns to look for (ported from prompt-v2)
+// =============================================================================
+
+const FOCUS_CHECKLISTS: Partial<Record<FocusArea, string>> = {
+  security: `Check for:
+- Injection vulnerabilities (SQL, NoSQL, Command, XSS)
+- Auth/authorization bypass, session management flaws
+- Sensitive data exposure, insecure storage, missing encryption
+- Input validation gaps (type, range, format)
+- Path traversal, SSRF, unsafe deserialization
+For each: CWE ID if applicable, attack scenario, severity by impact + exploitability.`,
+
+  performance: `Check for:
+- Algorithmic complexity (provide Big-O notation)
+- N+1 queries, missing indexes, unoptimized queries
+- Blocking I/O in async contexts
+- Memory leaks, unbounded allocations, large object retention
+- Missing caching/memoization, repeated expensive operations
+For each: Big-O analysis, estimated impact, concrete optimization.`,
+
+  architecture: `Check for:
+- SOLID violations (SRP, OCP, LSP, ISP, DIP)
+- High coupling between modules, low cohesion within
+- Layering violations, circular dependencies
+- Anti-patterns (god classes, deep nesting, magic numbers, leaky abstractions)
+- Missing or misused design patterns
+For each: specific principle violated, refactoring suggestion, maintainability impact.`,
+
+  correctness: `Check for:
+- Off-by-one errors, incorrect conditionals, wrong operators
+- Null/undefined handling, empty collections, boundary conditions
+- Race conditions, deadlock potential, state inconsistency
+- Uncaught exceptions, silent failures, incorrect error propagation
+For each: triggering input, expected vs actual behavior.
+For significant bugs: suggest a concrete regression test.`,
+
+  testing: `Check for:
+- Missing test coverage for changed code paths
+- Tests that pass for wrong reasons (tautologies, mocked-away logic)
+- Non-deterministic tests (timing, ordering, randomness)
+- Missing edge case tests (null, empty, boundary, error paths)
+For significant gaps: suggest a concrete test (name, inputs, expected output).`,
+
+  scalability: `Check for:
+- Algorithmic complexity that degrades at scale (provide Big-O)
+- Unbounded growth (queues, caches, in-memory collections)
+- Missing pagination, rate limiting, or backpressure
+- Single points of contention (locks, shared state, single-threaded bottlenecks)
+For each: estimated impact at 10x/100x current load.`,
+
+  maintainability: `Check for:
+- God classes, deep nesting (>3 levels), magic numbers
+- Tight coupling between modules, leaky abstractions
+- Code duplication that should be extracted
+- Missing or misleading comments on non-obvious logic
+For each: specific refactoring suggestion with rationale.`,
+
+  documentation: `Check for:
+- Public API functions missing doc comments
+- Outdated or misleading comments that contradict the code
+- Missing README updates for changed behavior
+- Undocumented configuration, environment variables, or flags
+For each: what specifically should be documented and where.`,
+};
 
 // =============================================================================
 // PROMPT BUILDER - Minimal, Targeted
@@ -351,7 +433,18 @@ export function buildHandoffPrompt(options: PromptOptions): string {
   // SECTION 1: ROLE
   sections.push(`# ROLE: ${role.name}\n\n${role.systemPrompt}`);
 
-  // SECTION 2: TASK
+  // SECTION 2: REVIEW CHECKLIST (focus-area-specific patterns to look for)
+  const focusAreas = handoff.focusAreas as FocusArea[] | undefined;
+  if (focusAreas && focusAreas.length > 0) {
+    const checklists = focusAreas
+      .map(f => FOCUS_CHECKLISTS[f])
+      .filter((c): c is string => !!c);
+    if (checklists.length > 0) {
+      sections.push(`## REVIEW CHECKLIST\n\n${checklists.join('\n\n')}`);
+    }
+  }
+
+  // SECTION 3: TASK
   sections.push(`## YOUR TASK
 
 Review code in \`${handoff.workingDir}\`.
@@ -362,7 +455,7 @@ Review code in \`${handoff.workingDir}\`.
 - This is a READ-ONLY review. Do NOT create, modify, or delete any files. Only read files to verify claims.
 - Do NOT assume a git repository exists. Do NOT run git commands. Read files directly from the filesystem.`);
 
-  // SECTION 3: CC'S UNCERTAINTIES
+  // SECTION 4: CC'S UNCERTAINTIES
   if (handoff.uncertainties && handoff.uncertainties.length > 0) {
     sections.push(`## CC'S UNCERTAINTIES
 
@@ -372,7 +465,7 @@ ${u.ccAssumption ? `- **CC assumed:** ${u.ccAssumption}` : ''}
 ${u.relevantFiles ? `- **Files:** ${u.relevantFiles.join(', ')}` : ''}`).join('\n\n')}`);
   }
 
-  // SECTION 4: SPECIFIC QUESTIONS
+  // SECTION 5: SPECIFIC QUESTIONS
   if (handoff.questions && handoff.questions.length > 0) {
     sections.push(`## QUESTIONS FROM CC
 
@@ -381,21 +474,19 @@ ${handoff.questions.map((q, i) => `${i + 1}. **${q.question}**
    ${q.ccGuess ? `CC Guess: ${q.ccGuess}` : ''}`).join('\n')}`);
   }
 
-  // SECTION 5: DECISIONS TO EVALUATE
+  // SECTION 6: DECISIONS TO EVALUATE
   if (handoff.decisions && handoff.decisions.length > 0) {
     sections.push(`## DECISIONS TO EVALUATE
 
-${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**
-   Rationale: ${d.rationale}
-   ${d.alternatives ? `Alternatives: ${d.alternatives.join(', ')}` : ''}`).join('\n')}`);
+${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**${d.rationale ? `\n   Rationale: ${d.rationale}` : ''}${d.alternatives ? `\n   Alternatives: ${d.alternatives.join(', ')}` : ''}`).join('\n')}`);
   }
 
-  // SECTION 6: PRIORITY FILES
+  // SECTION 7: PRIORITY FILES
   if (handoff.priorityFiles && handoff.priorityFiles.length > 0) {
     sections.push(`## PRIORITY FILES\n\n${handoff.priorityFiles.map(f => `- \`${f}\``).join('\n')}`);
   }
 
-  // SECTION 7: CUSTOM INSTRUCTIONS
+  // SECTION 8: CUSTOM INSTRUCTIONS
   if (handoff.customInstructions) {
     sections.push(`## ADDITIONAL INSTRUCTIONS\n\n${handoff.customInstructions}`);
   }
@@ -404,11 +495,158 @@ ${handoff.decisions.map((d, i) => `${i + 1}. **${d.decision}**
 }
 
 // =============================================================================
-// HELPER: Build handoff from simple inputs (backwards compatibility)
+// STRUCTURED ccOutput PARSER
 // =============================================================================
 
 /**
- * Build a handoff from legacy simple inputs
+ * Parse structured ccOutput into Handoff fields.
+ *
+ * The slash commands tell CC to format its output as:
+ *   SUMMARY:
+ *   <text>
+ *
+ *   UNCERTAINTIES (verify these):
+ *   1. <text>
+ *
+ *   QUESTIONS:
+ *   1. <text>
+ *
+ *   PRIORITY FILES:
+ *   - <file>
+ *
+ * If no sections detected, returns { summary: ccOutput } (graceful fallback).
+ */
+export function parseStructuredCcOutput(ccOutput: string): Pick<Handoff, 'summary'> & Partial<Handoff> {
+  // Quick check: does it look structured? Case-SENSITIVE to avoid matching
+  // prose like "Summary: I think..." — slash commands produce ALL-CAPS headers.
+  if (!/^SUMMARY[^:\n]*:/m.test(ccOutput)) {
+    return { summary: ccOutput };
+  }
+
+  // Known section headers — case-SENSITIVE (ALL-CAPS only) to prevent
+  // header injection from natural prose starting with "Questions:" etc.
+  const KNOWN_HEADERS = ['SUMMARY', 'UNCERTAINTIES', 'QUESTIONS', 'PRIORITY FILES', 'DECISIONS'];
+  const headerPattern = new RegExp(
+    `^(${KNOWN_HEADERS.join('|')})[^:\\n]*:`,
+    'gm'  // no 'i' flag — case-sensitive
+  );
+
+  // Find all header positions
+  const headers: Array<{ name: string; contentStart: number }> = [];
+  let match;
+  while ((match = headerPattern.exec(ccOutput)) !== null) {
+    const raw = match[1].trim();
+    const name = KNOWN_HEADERS.find(h => raw.startsWith(h)) || raw;
+    headers.push({ name, contentStart: match.index + match[0].length });
+  }
+
+  if (headers.length === 0) {
+    return { summary: ccOutput };
+  }
+
+  // Extract content between headers
+  const sections = new Map<string, string>();
+  for (let i = 0; i < headers.length; i++) {
+    const start = headers[i].contentStart;
+    const end = i + 1 < headers.length
+      ? ccOutput.lastIndexOf('\n', headers[i + 1].contentStart - headers[i + 1].name.length - 1)
+      : ccOutput.length;
+    sections.set(headers[i].name, ccOutput.slice(start, end).trim());
+  }
+
+  const rawSummary = sections.get('SUMMARY');
+  const result: Pick<Handoff, 'summary'> & Partial<Handoff> = {
+    summary: rawSummary && rawSummary.length > 0 ? rawSummary : ccOutput,
+  };
+
+  // Parse uncertainties (numbered or bulleted list)
+  const uncertText = sections.get('UNCERTAINTIES');
+  if (uncertText) {
+    const items = parseListItems(uncertText);
+    if (items.length > 0) {
+      result.uncertainties = items.map(item => ({
+        topic: extractTopic(item),
+        question: item,
+      }));
+    }
+  }
+
+  // Parse questions (numbered or bulleted list)
+  const questionsText = sections.get('QUESTIONS');
+  if (questionsText) {
+    const items = parseListItems(questionsText);
+    if (items.length > 0) {
+      result.questions = items.map(item => ({ question: item }));
+    }
+  }
+
+  // Parse priority files (bullet or numbered list)
+  const filesText = sections.get('PRIORITY FILES');
+  if (filesText) {
+    const items = parseListItems(filesText);
+    if (items.length > 0) {
+      result.priorityFiles = items;
+    }
+  }
+
+  // Parse decisions (numbered or bulleted list)
+  const decisionsText = sections.get('DECISIONS');
+  if (decisionsText) {
+    const items = parseListItems(decisionsText);
+    if (items.length > 0) {
+      result.decisions = items.map(item => ({ decision: item, rationale: '' }));
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Extract a short topic from an item — uses first sentence/clause up to 60 chars.
+ * Avoids redundant rendering where topic === question.
+ */
+function extractTopic(item: string): string {
+  // Try first clause (up to first comma, period, dash, or question mark)
+  const clauseMatch = item.match(/^(.+?)[,.\-?]/);
+  const clause = clauseMatch ? clauseMatch[1].trim() : item;
+  if (clause.length <= 60) return clause;
+  return clause.slice(0, 57) + '...';
+}
+
+/**
+ * Parse a list section that may use numbered ("1. foo") or bulleted ("- foo") format.
+ * Supports multi-line continuation for both styles.
+ */
+function parseListItems(text: string): string[] {
+  const items: string[] = [];
+  let current = '';
+  for (const line of text.split('\n')) {
+    // Match numbered: "1. foo", "2) bar"
+    const numbered = line.match(/^\d+[.)]\s+(.+)/);
+    // Match bulleted: "- foo", "* bar"
+    const bulleted = line.match(/^[-*]\s+(.+)/);
+    if (numbered || bulleted) {
+      if (current) items.push(current.trim());
+      current = (numbered || bulleted)![1];
+    } else if (current && line.trim()) {
+      // Continuation line for multi-line items
+      current += ' ' + line.trim();
+    }
+  }
+  if (current) items.push(current.trim());
+  return items;
+}
+
+// =============================================================================
+// HELPER: Build handoff from simple inputs
+// =============================================================================
+
+/**
+ * Build a handoff from MCP tool inputs.
+ *
+ * Parses structured sections (SUMMARY, UNCERTAINTIES, QUESTIONS, PRIORITY FILES)
+ * from ccOutput when present, populating typed Handoff fields so reviewers
+ * receive machine-usable context instead of a single summary blob.
  */
 export function buildSimpleHandoff(
   workingDir: string,
@@ -417,13 +655,28 @@ export function buildSimpleHandoff(
   focusAreas?: string[],
   customPrompt?: string
 ): Handoff {
+  const parsed = parseStructuredCcOutput(ccOutput);
+
+  // Merge analyzedFiles with any priority files parsed from ccOutput (dedup)
+  const mergedFiles = dedupStrings([
+    ...(parsed.priorityFiles || []),
+    ...(analyzedFiles || []),
+  ]);
+
   return {
     workingDir,
-    summary: ccOutput,
-    priorityFiles: analyzedFiles,
+    summary: parsed.summary,
+    uncertainties: parsed.uncertainties,
+    questions: parsed.questions,
+    decisions: parsed.decisions,
+    priorityFiles: mergedFiles.length > 0 ? mergedFiles : undefined,
     focusAreas,
     customInstructions: customPrompt,
   };
+}
+
+function dedupStrings(arr: string[]): string[] {
+  return [...new Set(arr)];
 }
 
 /**
