@@ -89,6 +89,7 @@ export class ClaudeAdapter {
         const args = [
             '-p', // Non-interactive, print and exit
             '--model', 'opus', // Use Opus
+            '--bare', // Skip hooks, plugins, CLAUDE.md, auto-memory
             '--permission-mode', 'plan', // Read-only enforcement (layer 1)
             '--verbose', // Required for stream-json
             '--output-format', 'stream-json', // Structured streaming events
@@ -129,8 +130,11 @@ export class ClaudeAdapter {
         if (!finalResponse && decoder.hasNoOutput()) {
             return { stdout: '', stderr: 'No response from Claude — possible rate limit or auth issue', exitCode: 1, truncated: false };
         }
+        if (!finalResponse) {
+            return { stdout: '', stderr: 'Claude produced no result event — review may have failed silently', exitCode: 1, truncated: false };
+        }
         return {
-            stdout: finalResponse || result.rawStdout,
+            stdout: finalResponse,
             stderr: result.stderr,
             exitCode: result.exitCode,
             truncated: result.truncated,
