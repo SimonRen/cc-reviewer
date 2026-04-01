@@ -67,6 +67,9 @@ export interface ReviewRequest {
 
   /** Service tier (for models that support it: priority = fast, flex = cheap) */
   serviceTier?: ServiceTier;
+
+  /** Review mode: standard finds bugs, adversarial challenges assumptions */
+  reviewMode?: 'standard' | 'adversarial';
 }
 
 // =============================================================================
