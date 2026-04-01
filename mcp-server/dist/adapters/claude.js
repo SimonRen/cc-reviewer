@@ -159,12 +159,12 @@ export class ClaudeAdapter {
     categorizeError(stderr) {
         const lower = stderr.toLowerCase();
         if (lower.includes('rate limit') || lower.includes('quota') || lower.includes('no response from claude')) {
-            return { type: 'rate_limit', message: 'Claude rate limit — try again later' };
+            return { type: 'rate_limit', message: `Claude rate limit: ${stderr.slice(0, 500)}` };
         }
         if (lower.includes('unauthorized') || lower.includes('authentication') || lower.includes('api key') || stderr.includes('401') || stderr.includes('403')) {
-            return { type: 'auth_error', message: 'Authentication failed', details: { stderr } };
+            return { type: 'auth_error', message: `Authentication failed: ${stderr.slice(0, 500)}`, details: { stderr } };
         }
-        return { type: 'cli_error', message: stderr || 'Unknown error' };
+        return { type: 'cli_error', message: stderr.slice(0, 500) || 'Unknown error' };
     }
     getSuggestion(error) {
         switch (error.type) {

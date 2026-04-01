@@ -110,8 +110,11 @@ export class GeminiAdapter {
         const elapsed = Math.round((Date.now() - cliStartTime) / 1000);
         console.error(`[gemini] ✓ complete (${elapsed}s)`);
         const finalResponse = decoder.getFinalResponse();
+        if (!finalResponse && result.exitCode === 0) {
+            return { stdout: '', stderr: 'Gemini produced no output — review may have failed silently', exitCode: 1, truncated: false };
+        }
         return {
-            stdout: finalResponse || result.rawStdout,
+            stdout: finalResponse || '',
             stderr: result.stderr,
             exitCode: result.exitCode,
             truncated: result.truncated,
@@ -136,12 +139,12 @@ export class GeminiAdapter {
     categorizeError(stderr) {
         const lower = stderr.toLowerCase();
         if (lower.includes('rate limit') || lower.includes('quota')) {
-            return { type: 'rate_limit', message: 'Rate limit or quota exceeded' };
+            return { type: 'rate_limit', message: `Rate limit or quota exceeded: ${stderr.slice(0, 500)}` };
         }
         if (lower.includes('unauthorized') || lower.includes('authentication') || lower.includes('api key') || stderr.includes('401') || stderr.includes('403')) {
-            return { type: 'auth_error', message: 'Authentication failed', details: { stderr } };
+            return { type: 'auth_error', message: `Authentication failed: ${stderr.slice(0, 500)}`, details: { stderr } };
         }
-        return { type: 'cli_error', message: stderr || 'Unknown error' };
+        return { type: 'cli_error', message: stderr.slice(0, 500) || 'Unknown error' };
     }
     getSuggestion(error) {
         switch (error.type) {

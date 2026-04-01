@@ -130,8 +130,11 @@ export class CodexAdapter {
         if (!finalResponse && decoder.hasNoOutput()) {
             return { stdout: '', stderr: 'No response from Codex — possible rate limit or model rejection', exitCode: 1, truncated: false };
         }
+        if (!finalResponse) {
+            return { stdout: '', stderr: 'Codex produced no result event — review may have failed silently', exitCode: 1, truncated: false };
+        }
         return {
-            stdout: finalResponse || result.rawStdout,
+            stdout: finalResponse,
             stderr: result.stderr,
             exitCode: result.exitCode,
             truncated: result.truncated,
@@ -156,15 +159,15 @@ export class CodexAdapter {
     categorizeError(stderr) {
         const lower = stderr.toLowerCase();
         if (lower.includes('rate limit') || lower.includes('possible rate limit') || lower.includes('no response from codex')) {
-            return { type: 'rate_limit', message: 'Codex rate limit — no tokens available' };
+            return { type: 'rate_limit', message: `Codex rate limit: ${stderr.slice(0, 500)}` };
         }
         if (lower.includes('unauthorized') || lower.includes('authentication') || stderr.includes('401') || stderr.includes('403')) {
-            return { type: 'auth_error', message: 'Authentication failed', details: { stderr } };
+            return { type: 'auth_error', message: `Authentication failed: ${stderr.slice(0, 500)}`, details: { stderr } };
         }
         if (lower.includes('invalid_json_schema') || lower.includes('invalid_request_error')) {
-            return { type: 'cli_error', message: `API error: ${stderr.slice(0, 300)}` };
+            return { type: 'cli_error', message: `API error: ${stderr.slice(0, 500)}` };
         }
-        return { type: 'cli_error', message: stderr || 'Unknown error' };
+        return { type: 'cli_error', message: stderr.slice(0, 500) || 'Unknown error' };
     }
     getSuggestion(error) {
         switch (error.type) {
