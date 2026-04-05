@@ -44,4 +44,4 @@ jobs:
         run: npm run build
 
       - name: Publish to npm (OIDC auth)
-        run: npm publish --access public
+        run: npx -y npm@11 publish --access public
