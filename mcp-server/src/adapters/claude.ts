@@ -123,7 +123,7 @@ export class ClaudeAdapter implements ReviewerAdapter {
     const args = [
       '-p',                                 // Non-interactive, print and exit
       '--model', 'opus',                    // Use Opus
-      '--bare',                             // Skip hooks, plugins, CLAUDE.md, auto-memory
+      '--setting-sources', '',                // Skip hooks, plugins, CLAUDE.md (preserves OAuth auth; --bare kills keychain)
       '--permission-mode', 'plan',          // Read-only enforcement (layer 1)
       '--verbose',                          // Required for stream-json
       '--output-format', 'stream-json',     // Structured streaming events
@@ -209,7 +209,7 @@ export class ClaudeAdapter implements ReviewerAdapter {
     if (lower.includes('rate limit') || lower.includes('rate_limit') || lower.includes('quota')) {
       return { type: 'rate_limit', message: `Claude rate limit: ${stderr.slice(0, 500)}` };
     }
-    if (lower.includes('unauthorized') || lower.includes('authentication') || lower.includes('api key') || stderr.includes('401') || stderr.includes('403')) {
+    if (lower.includes('unauthorized') || lower.includes('authentication') || lower.includes('not logged in') || lower.includes('api key') || stderr.includes('401') || stderr.includes('403')) {
       return { type: 'auth_error', message: `Authentication failed: ${stderr.slice(0, 500)}`, details: { stderr } };
     }
     return { type: 'cli_error', message: stderr.slice(0, 500) || 'Unknown error' };
