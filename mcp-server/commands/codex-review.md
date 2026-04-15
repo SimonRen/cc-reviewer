@@ -49,9 +49,9 @@ Call `codex_review` with:
 ```
 
 ### Service Tier (from $ARGUMENTS)
-- If user says "fast mode", "fast", or "priority" → set `serviceTier: "fast"` (priority processing, ~2x cost)
 - If user says "flex", "cheap", or "budget" → set `serviceTier: "flex"` (50% cheaper, slower)
-- Otherwise → omit `serviceTier` (uses default tier)
+- If user says "default tier" or "standard tier" → set `serviceTier: "default"` (API default)
+- Otherwise → omit `serviceTier` (defaults to `"fast"` — priority processing, ~2x cost)
 
 ### Structure your ccOutput:
 

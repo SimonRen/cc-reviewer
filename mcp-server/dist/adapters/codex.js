@@ -94,12 +94,15 @@ export class CodexAdapter {
             '-C', workingDir,
             '-', // Read prompt from stdin
         ];
-        if (serviceTier && serviceTier !== 'default') {
-            args.push('-c', `service_tier=${serviceTier}`);
+        // Default to 'fast' tier when caller omits serviceTier.
+        // Explicit 'default' is a user opt-out and emits no flag (uses Codex API default).
+        const effectiveTier = serviceTier === undefined ? 'fast' : serviceTier;
+        if (effectiveTier !== 'default') {
+            args.push('-c', `service_tier=${effectiveTier}`);
         }
         const decoder = new CodexEventDecoder();
         const cliStartTime = Date.now();
-        const tierLabel = serviceTier && serviceTier !== 'default' ? ` [${serviceTier}]` : '';
+        const tierLabel = effectiveTier !== 'default' ? ` [${effectiveTier}]` : '';
         console.error(`[codex] Running with ${reasoningEffort} reasoning${tierLabel}...`);
         decoder.onProgress = (eventType, detail) => {
             const elapsed = Math.round((Date.now() - cliStartTime) / 1000);

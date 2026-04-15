@@ -34,7 +34,7 @@ export interface FeedbackRequest {
   focusAreas?: FocusArea[];   // Areas to focus review
   customPrompt?: string;      // User's custom instructions
   reasoningEffort?: ReasoningEffort; // Codex reasoning effort (default: high)
-  serviceTier?: ServiceTier;         // Codex service tier (default: default)
+  serviceTier?: ServiceTier;         // Codex service tier (default when undefined: 'fast')
 }
 
 // Successful feedback result

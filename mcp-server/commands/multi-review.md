@@ -58,9 +58,9 @@ Call `multi_review` with:
 ```
 
 ### Service Tier (from $ARGUMENTS, applies to Codex only)
-- If user says "fast mode", "fast", or "priority" → set `serviceTier: "fast"`
 - If user says "flex", "cheap", or "budget" → set `serviceTier: "flex"`
-- Otherwise → omit `serviceTier`
+- If user says "default tier" or "standard tier" → set `serviceTier: "default"`
+- Otherwise → omit `serviceTier` (defaults to `"fast"` — priority processing, ~2x cost)
 
 ### Structure your ccOutput:
 

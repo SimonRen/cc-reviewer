@@ -29,7 +29,7 @@ export const ReviewInputSchema = z.object({
   ])).optional().describe('Areas to focus the review on'),
   customPrompt: z.string().optional().describe('Custom instructions for the reviewer'),
   reasoningEffort: z.enum(['high', 'xhigh']).optional().describe('Codex reasoning effort level (default: high, use xhigh for deeper analysis)'),
-  serviceTier: z.enum(['default', 'fast', 'flex']).optional().describe('Codex service tier (default: default, fast = priority processing, flex = cheaper/slower)')
+  serviceTier: z.enum(['default', 'fast', 'flex']).optional().describe('Codex service tier (default when omitted: fast = priority processing, ~2x cost; flex = 50% cheaper/slower; default = API default tier)')
 });
 
 export type ReviewInput = z.infer<typeof ReviewInputSchema>;
@@ -173,7 +173,7 @@ export const TOOL_DEFINITIONS = {
         focusAreas: { type: 'array', items: { type: 'string', enum: ['security', 'performance', 'architecture', 'correctness', 'maintainability', 'scalability', 'testing', 'documentation'] }, description: 'Areas to focus the review on' },
         customPrompt: { type: 'string', description: 'Custom instructions for the reviewer' },
         reasoningEffort: { type: 'string', enum: ['high', 'xhigh'], description: 'Codex reasoning effort (default: high, use xhigh for deeper analysis)' },
-        serviceTier: { type: 'string', enum: ['default', 'fast', 'flex'], description: 'Codex service tier (fast = priority processing, flex = cheaper/slower)' }
+        serviceTier: { type: 'string', enum: ['default', 'fast', 'flex'], description: 'Codex service tier (omit for fast default; fast = priority ~2x cost, flex = 50% cheaper/slower, default = API default tier)' }
       },
       required: ['workingDir', 'ccOutput', 'outputType']
     }
@@ -222,7 +222,7 @@ export const TOOL_DEFINITIONS = {
         analyzedFiles: { type: 'array', items: { type: 'string' }, description: 'File paths that CC analyzed' },
         focusAreas: { type: 'array', items: { type: 'string', enum: ['security', 'performance', 'architecture', 'correctness', 'maintainability', 'scalability', 'testing', 'documentation'] }, description: 'Areas to focus the review on' },
         customPrompt: { type: 'string', description: 'Custom instructions for standard review + adversarial focus steering' },
-        serviceTier: { type: 'string', enum: ['default', 'fast', 'flex'], description: 'Codex service tier (fast = priority processing, flex = cheaper/slower). Only applies to Codex.' }
+        serviceTier: { type: 'string', enum: ['default', 'fast', 'flex'], description: 'Codex service tier — only applies to Codex. Omit for fast default; fast = priority ~2x cost, flex = 50% cheaper/slower, default = API default tier.' }
       },
       required: ['workingDir', 'ccOutput', 'outputType']
     }

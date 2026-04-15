@@ -65,7 +65,7 @@ export interface ReviewRequest {
   /** Reasoning effort level (for models that support it) */
   reasoningEffort?: ReasoningEffort;
 
-  /** Service tier (for models that support it: priority = fast, flex = cheap) */
+  /** Service tier (Codex). Omit for the review chain's default 'fast' (priority). Pass 'flex' for cheap/slow or 'default' for the Codex API default tier. */
   serviceTier?: ServiceTier;
 
   /** Review mode: standard finds bugs, adversarial challenges assumptions */
