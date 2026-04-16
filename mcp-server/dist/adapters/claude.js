@@ -16,12 +16,7 @@ import { registerAdapter, } from './base.js';
 import { CliExecutor } from '../executor.js';
 import { ClaudeEventDecoder } from '../decoders/index.js';
 import { buildSimpleHandoff, buildHandoffPrompt, buildAdversarialHandoffPrompt, selectRole, } from '../handoff.js';
-// =============================================================================
-// CONFIGURATION
-// =============================================================================
-const INACTIVITY_TIMEOUT_MS = 300_000; // 5 min — Opus has long thinking phases
-const MAX_TIMEOUT_MS = 3_600_000; // 60 min absolute max
-const MAX_BUFFER_SIZE = 1024 * 1024; // 1MB max buffer
+import { getConfig } from '../config.js';
 // Write tools explicitly blocked as defense-in-depth
 const DISALLOWED_TOOLS = 'Edit Write NotebookEdit';
 // =============================================================================
@@ -43,12 +38,18 @@ export class ClaudeAdapter {
     }
     async isAvailable() {
         return new Promise((resolve) => {
+            let settled = false;
+            const done = (result) => { if (!settled) {
+                settled = true;
+                clearTimeout(timer);
+                resolve(result);
+            } };
             const proc = spawn('claude', ['--version'], {
                 stdio: ['ignore', 'pipe', 'pipe'],
             });
-            proc.on('close', (code) => resolve(code === 0));
-            proc.on('error', () => resolve(false));
-            setTimeout(() => { proc.kill(); resolve(false); }, 5000);
+            proc.on('close', (code) => done(code === 0));
+            proc.on('error', () => done(false));
+            const timer = setTimeout(() => { proc.kill(); done(false); }, 5000);
         });
     }
     async runReview(request) {
@@ -86,9 +87,10 @@ export class ClaudeAdapter {
         }
     }
     async runCli(prompt, workingDir) {
+        const cfg = getConfig().claude;
         const args = [
             '-p', // Non-interactive, print and exit
-            '--model', 'opus', // Use Opus
+            '--model', cfg.model, // Model from config (default: opus)
             '--setting-sources', '', // Skip hooks, plugins, CLAUDE.md (preserves OAuth auth; --bare kills keychain)
             '--permission-mode', 'plan', // Read-only enforcement (layer 1)
             '--verbose', // Required for stream-json
@@ -111,9 +113,9 @@ export class ClaudeAdapter {
             args,
             cwd: workingDir,
             stdin: prompt,
-            inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,
-            maxTimeoutMs: MAX_TIMEOUT_MS,
-            maxBufferSize: MAX_BUFFER_SIZE,
+            inactivityTimeoutMs: cfg.inactivityTimeoutMs,
+            maxTimeoutMs: cfg.maxTimeoutMs,
+            maxBufferSize: cfg.maxBufferSize,
             onLine: (line) => {
                 decoder.processLine(line);
             },

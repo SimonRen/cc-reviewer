@@ -25,14 +25,7 @@ import {
   selectRole,
   FocusArea,
 } from '../handoff.js';
-
-// =============================================================================
-// CONFIGURATION
-// =============================================================================
-
-const INACTIVITY_TIMEOUT_MS = 300_000; // 5 min — covers reasoning gaps between tool use
-const MAX_TIMEOUT_MS = 3_600_000;     // 60 min absolute max
-const MAX_BUFFER_SIZE = 1024 * 1024;  // 1MB max buffer
+import { getConfig } from '../config.js';
 
 // =============================================================================
 // GEMINI ADAPTER
@@ -56,12 +49,14 @@ export class GeminiAdapter implements ReviewerAdapter {
 
   async isAvailable(): Promise<boolean> {
     return new Promise((resolve) => {
+      let settled = false;
+      const done = (result: boolean) => { if (!settled) { settled = true; clearTimeout(timer); resolve(result); } };
       const proc = spawn('gemini', ['--version'], {
         stdio: ['ignore', 'pipe', 'pipe'],
       });
-      proc.on('close', (code) => resolve(code === 0));
-      proc.on('error', () => resolve(false));
-      setTimeout(() => { proc.kill(); resolve(false); }, 5000);
+      proc.on('close', (code) => done(code === 0));
+      proc.on('error', () => done(false));
+      const timer = setTimeout(() => { proc.kill(); done(false); }, 5000);
     });
   }
 
@@ -112,6 +107,7 @@ export class GeminiAdapter implements ReviewerAdapter {
     prompt: string,
     workingDir: string
   ): Promise<{ stdout: string; stderr: string; exitCode: number; truncated: boolean }> {
+    const cfg = getConfig().gemini;
     const args = [
       '--sandbox',
       '--approval-mode', 'plan',
@@ -119,6 +115,9 @@ export class GeminiAdapter implements ReviewerAdapter {
       '--include-directories', workingDir,
       '-p', '',
     ];
+    if (cfg.model) {
+      args.push('--model', cfg.model);
+    }
 
     const decoder = new GeminiEventDecoder();
     const cliStartTime = Date.now();
@@ -136,9 +135,9 @@ export class GeminiAdapter implements ReviewerAdapter {
       args,
       cwd: workingDir,
       stdin: prompt,
-      inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS,
-      maxTimeoutMs: MAX_TIMEOUT_MS,
-      maxBufferSize: MAX_BUFFER_SIZE,
+      inactivityTimeoutMs: cfg.inactivityTimeoutMs,
+      maxTimeoutMs: cfg.maxTimeoutMs,
+      maxBufferSize: cfg.maxBufferSize,
       onLine: (line: string) => {
         decoder.processLine(line);
       },

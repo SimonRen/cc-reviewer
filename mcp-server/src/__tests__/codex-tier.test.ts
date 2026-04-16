@@ -5,7 +5,8 @@
  * explicit 'default' opts out of the flag entirely.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
+import { setConfigPathForTesting } from '../config.js';
 
 type CapturedArgs = string[];
 const capturedArgs: CapturedArgs[] = [];
@@ -43,6 +44,10 @@ function findServiceTierArg(args: string[]): string | undefined {
   const idx = args.findIndex((a) => typeof a === 'string' && a.startsWith('service_tier='));
   return idx >= 0 ? args[idx] : undefined;
 }
+
+// Isolate from the user's real config — use a non-existent path so defaults apply.
+setConfigPathForTesting('/tmp/__cc_reviewer_test_nonexistent/config.json');
+afterAll(() => setConfigPathForTesting(null));
 
 describe('CodexAdapter — serviceTier defaulting', () => {
   beforeEach(() => {

@@ -18,20 +18,20 @@ export declare const ReviewInputSchema: z.ZodObject<{
     workingDir: string;
     ccOutput: string;
     outputType: "findings" | "analysis" | "plan" | "proposal";
+    reasoningEffort?: "high" | "xhigh" | undefined;
+    serviceTier?: "default" | "fast" | "flex" | undefined;
     focusAreas?: ("performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation")[] | undefined;
     analyzedFiles?: string[] | undefined;
     customPrompt?: string | undefined;
-    reasoningEffort?: "high" | "xhigh" | undefined;
-    serviceTier?: "default" | "fast" | "flex" | undefined;
 }, {
     workingDir: string;
     ccOutput: string;
     outputType: "findings" | "analysis" | "plan" | "proposal";
+    reasoningEffort?: "high" | "xhigh" | undefined;
+    serviceTier?: "default" | "fast" | "flex" | undefined;
     focusAreas?: ("performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation")[] | undefined;
     analyzedFiles?: string[] | undefined;
     customPrompt?: string | undefined;
-    reasoningEffort?: "high" | "xhigh" | undefined;
-    serviceTier?: "default" | "fast" | "flex" | undefined;
 }>;
 export type ReviewInput = z.infer<typeof ReviewInputSchema>;
 export declare function handleCodexReview(input: ReviewInput): Promise<{

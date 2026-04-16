@@ -63,7 +63,7 @@ export declare const ReviewFinding: z.ZodObject<{
     owasp_category: z.ZodOptional<z.ZodString>;
     tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
 }, "strip", z.ZodTypeAny, {
-    severity: "info" | "high" | "critical" | "medium" | "low";
+    severity: "high" | "info" | "critical" | "medium" | "low";
     title: string;
     description: string;
     category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
@@ -82,7 +82,7 @@ export declare const ReviewFinding: z.ZodObject<{
     owasp_category?: string | undefined;
     tags?: string[] | undefined;
 }, {
-    severity: "info" | "high" | "critical" | "medium" | "low";
+    severity: "high" | "info" | "critical" | "medium" | "low";
     title: string;
     description: string;
     category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
@@ -266,7 +266,7 @@ export declare const ReviewOutput: z.ZodObject<{
         owasp_category: z.ZodOptional<z.ZodString>;
         tags: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
     }, "strip", z.ZodTypeAny, {
-        severity: "info" | "high" | "critical" | "medium" | "low";
+        severity: "high" | "info" | "critical" | "medium" | "low";
         title: string;
         description: string;
         category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
@@ -285,7 +285,7 @@ export declare const ReviewOutput: z.ZodObject<{
         owasp_category?: string | undefined;
         tags?: string[] | undefined;
     }, {
-        severity: "info" | "high" | "critical" | "medium" | "low";
+        severity: "high" | "info" | "critical" | "medium" | "low";
         title: string;
         description: string;
         category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
@@ -431,7 +431,7 @@ export declare const ReviewOutput: z.ZodObject<{
     execution_notes: z.ZodOptional<z.ZodNullable<z.ZodString>>;
 }, "strip", z.ZodTypeAny, {
     findings: {
-        severity: "info" | "high" | "critical" | "medium" | "low";
+        severity: "high" | "info" | "critical" | "medium" | "low";
         title: string;
         description: string;
         category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";
@@ -499,7 +499,7 @@ export declare const ReviewOutput: z.ZodObject<{
     execution_notes?: string | null | undefined;
 }, {
     findings: {
-        severity: "info" | "high" | "critical" | "medium" | "low";
+        severity: "high" | "info" | "critical" | "medium" | "low";
         title: string;
         description: string;
         category: "other" | "performance" | "security" | "testing" | "architecture" | "correctness" | "maintainability" | "scalability" | "documentation" | "best-practice";

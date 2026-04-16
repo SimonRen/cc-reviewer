@@ -21,6 +21,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema, } from '@modelcontextpro
 import { handleCodexReview, handleGeminiReview, handleClaudeReview, handleMultiReview, ReviewInputSchema, TOOL_DEFINITIONS } from './tools/feedback.js';
 import { logCliStatus } from './cli/check.js';
 import { installCommands } from './commands.js';
+import { initConfig } from './config.js';
 // Read version from package.json
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';
@@ -111,6 +112,17 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 });
 // Start the server
 async function main() {
+    // Initialize config (writes defaults to ~/.config/cc-reviewer/config.json on first run)
+    try {
+        const cfg = initConfig();
+        console.error(cfg.created
+            ? `[cc-reviewer] Initialized config at ${cfg.path}`
+            : `[cc-reviewer] Loaded config from ${cfg.path}`);
+    }
+    catch (error) {
+        const msg = error instanceof Error ? error.message : String(error);
+        console.error(`[cc-reviewer] Warning: Could not initialize config: ${msg}`);
+    }
     // Auto-install slash commands
     const result = installCommands();
     if (result.success) {

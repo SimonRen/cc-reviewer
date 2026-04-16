@@ -11,15 +11,7 @@ import { registerAdapter, } from './base.js';
 import { CliExecutor } from '../executor.js';
 import { CodexEventDecoder } from '../decoders/index.js';
 import { buildSimpleHandoff, buildHandoffPrompt, buildAdversarialHandoffPrompt, selectRole, } from '../handoff.js';
-// =============================================================================
-// CONFIGURATION
-// =============================================================================
-const INACTIVITY_TIMEOUT_MS = {
-    high: 180_000, // 3 min — covers reasoning gaps between tool use bursts
-    xhigh: 300_000, // 5 min — xhigh has longer reasoning phases
-};
-const MAX_TIMEOUT_MS = 3_600_000; // 60 min absolute max
-const MAX_BUFFER_SIZE = 1024 * 1024; // 1MB max buffer
+import { getConfig } from '../config.js';
 // =============================================================================
 // CODEX ADAPTER
 // =============================================================================
@@ -39,12 +31,18 @@ export class CodexAdapter {
     }
     async isAvailable() {
         return new Promise((resolve) => {
+            let settled = false;
+            const done = (result) => { if (!settled) {
+                settled = true;
+                clearTimeout(timer);
+                resolve(result);
+            } };
             const proc = spawn('codex', ['--version'], {
                 stdio: ['ignore', 'pipe', 'pipe'],
             });
-            proc.on('close', (code) => resolve(code === 0));
-            proc.on('error', () => resolve(false));
-            setTimeout(() => { proc.kill(); resolve(false); }, 5000);
+            proc.on('close', (code) => done(code === 0));
+            proc.on('error', () => done(false));
+            const timer = setTimeout(() => { proc.kill(); done(false); }, 5000);
         });
     }
     async runReview(request) {
@@ -62,7 +60,8 @@ export class CodexAdapter {
             const prompt = request.reviewMode === 'adversarial'
                 ? buildAdversarialHandoffPrompt({ handoff })
                 : buildHandoffPrompt({ handoff, role: selectRole(request.focusAreas) });
-            const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort || 'high', request.serviceTier);
+            const cfg = getConfig().codex;
+            const result = await this.runCli(prompt, request.workingDir, request.reasoningEffort ?? cfg.reasoningEffort, request.serviceTier);
             if (result.exitCode !== 0) {
                 const error = this.categorizeError(result.stderr);
                 return { success: false, error, suggestion: this.getSuggestion(error), executionTimeMs: Date.now() - startTime };
@@ -82,10 +81,11 @@ export class CodexAdapter {
         }
     }
     async runCli(prompt, workingDir, reasoningEffort, serviceTier) {
+        const cfg = getConfig().codex;
         const args = [
             'exec',
             '--json', // JSONL streaming events
-            '-m', 'gpt-5.4',
+            '-m', cfg.model,
             '-c', `model_reasoning_effort=${reasoningEffort}`,
             '-c', 'model_reasoning_summary_format=experimental',
             '--full-auto',
@@ -94,9 +94,9 @@ export class CodexAdapter {
             '-C', workingDir,
             '-', // Read prompt from stdin
         ];
-        // Default to 'fast' tier when caller omits serviceTier.
-        // Explicit 'default' is a user opt-out and emits no flag (uses Codex API default).
-        const effectiveTier = serviceTier === undefined ? 'fast' : serviceTier;
+        // Caller-supplied serviceTier overrides config. Explicit 'default' is an
+        // opt-out and emits no flag (uses Codex API default).
+        const effectiveTier = serviceTier ?? cfg.serviceTier;
         if (effectiveTier !== 'default') {
             args.push('-c', `service_tier=${effectiveTier}`);
         }
@@ -114,9 +114,9 @@ export class CodexAdapter {
             args,
             cwd: workingDir,
             stdin: prompt,
-            inactivityTimeoutMs: INACTIVITY_TIMEOUT_MS[reasoningEffort] || INACTIVITY_TIMEOUT_MS.high,
-            maxTimeoutMs: MAX_TIMEOUT_MS,
-            maxBufferSize: MAX_BUFFER_SIZE,
+            inactivityTimeoutMs: cfg.inactivityTimeoutMs[reasoningEffort] ?? cfg.inactivityTimeoutMs.high,
+            maxTimeoutMs: cfg.maxTimeoutMs,
+            maxBufferSize: cfg.maxBufferSize,
             onLine: (line) => {
                 decoder.processLine(line);
             },
