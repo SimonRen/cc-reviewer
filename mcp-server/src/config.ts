@@ -24,7 +24,7 @@ import { homedir } from 'os';
 
 export const CodexConfigSchema = z
   .object({
-    model: z.string().default('gpt-5.4'),
+    model: z.string().default('gpt-5.5'),
     reasoningEffort: z.enum(['high', 'xhigh']).default('high'),
     serviceTier: z.enum(['default', 'fast', 'flex']).default('fast'),
     inactivityTimeoutMs: z

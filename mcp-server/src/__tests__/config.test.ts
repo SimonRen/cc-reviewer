@@ -47,7 +47,7 @@ afterEach(() => {
 describe('DEFAULT_CONFIG', () => {
   it('has expected codex defaults', () => {
     expect(DEFAULT_CONFIG.codex).toEqual({
-      model: 'gpt-5.4',
+      model: 'gpt-5.5',
       reasoningEffort: 'high',
       serviceTier: 'fast',
       inactivityTimeoutMs: { high: 180_000, xhigh: 300_000 },
